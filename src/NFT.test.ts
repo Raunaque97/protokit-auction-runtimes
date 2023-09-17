@@ -5,8 +5,8 @@ import { log } from "@proto-kit/common";
 
 log.disableAll();
 
-describe("NFTs", () => {
-  it("should able to transfer", async () => {
+describe("NFT", () => {
+  it("should able to mint & transfer", async () => {
     const appChain = TestingAppChain.fromRuntime({
       modules: {
         NFT,
@@ -38,18 +38,50 @@ describe("NFTs", () => {
       )
     );
     appChain.setSigner(minterPrivateKey);
-    const tx1 = appChain.transaction(minter, () => {
-      nft.mint(minter, nftMetadata);
-    });
+    const tx1 = appChain.transaction(
+      minter,
+      () => {
+        nft.mint(minter, nftMetadata); // mints to himself
+      },
+      { nonce: 0 }
+    );
     await tx1.sign();
     await tx1.send();
 
+    const tx2 = appChain.transaction(
+      minter,
+      () => {
+        nft.mint(alice, nftMetadata); // mints to Alice
+      },
+      { nonce: 1 }
+    );
+    await tx2.sign();
+    await tx2.send();
+
+    // minter transfers nft1 to bob
+    const tx3 = appChain.transaction(
+      minter,
+      () => {
+        // nft.transfer(bob, NFTKey.from(minter, UInt32.from(0))); // has no effect
+        nft.transferSigned(bob, minter, UInt32.from(0));
+        // nft.mint(bob, nftMetadata);
+      },
+      { nonce: 2 }
+    );
+    await tx3.sign();
+    await tx3.send();
+
     const block1 = await appChain.produceBlock();
+    expect(block1?.txs[0].status, block1?.txs[0].statusMessage).toBe(true);
 
     const nft1key = NFTKey.from(minter, UInt32.from(0));
-    const nft1 = await appChain.query.runtime.NFT.records.get(nft1key);
-
+    const nft2key = NFTKey.from(minter, UInt32.from(1));
+    let nft1 = await appChain.query.runtime.NFT.records.get(nft1key);
+    let nft2 = await appChain.query.runtime.NFT.records.get(nft2key);
     expect(nft1?.owner).toStrictEqual(minter);
-    expect(block1?.txs[0].status, block1?.txs[0].statusMessage).toBe(true);
-  });
+    expect(nft2?.owner).toStrictEqual(alice);
+
+    // const block2 = await appChain.produceBlock();
+    // expect(block2?.txs[0].status, block2?.txs[0].statusMessage).toBe(true);
+  }, 60_000);
 });

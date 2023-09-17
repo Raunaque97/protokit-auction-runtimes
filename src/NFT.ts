@@ -43,7 +43,8 @@ export class NFT extends RuntimeModule<{}> {
   }
 
   @runtimeMethod()
-  public transferSigned(to: PublicKey, key: NFTKey) {
+  public transferSigned(to: PublicKey, collectionId: PublicKey, id: UInt32) {
+    const key = NFTKey.from(collectionId, id);
     const nft = this.records.get(key).value;
     // check if sender is the current owner
     assert(nft.owner.equals(this.transaction.sender), "Not owner of NFT");
