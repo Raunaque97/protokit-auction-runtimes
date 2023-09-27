@@ -3,7 +3,7 @@ import { Poseidon, PrivateKey, UInt32, Encoding } from "snarkyjs";
 import { NFTKey, NFT } from "./NFT";
 import { log } from "@proto-kit/common";
 
-log.disableAll();
+log.setLevel("ERROR");
 
 describe("NFT", () => {
   it("should able to mint & transfer", async () => {
@@ -72,7 +72,7 @@ describe("NFT", () => {
     await tx3.send();
 
     const block1 = await appChain.produceBlock();
-    expect(block1?.txs[0].status, block1?.txs[0].statusMessage).toBe(true);
+    expect(block1?.txs[0].status).toBe(true);
 
     const nft1key = NFTKey.from(minter, UInt32.from(0));
     const nft2key = NFTKey.from(minter, UInt32.from(1));
@@ -82,6 +82,6 @@ describe("NFT", () => {
     expect(nft2?.owner).toStrictEqual(alice);
 
     // const block2 = await appChain.produceBlock();
-    // expect(block2?.txs[0].status, block2?.txs[0].statusMessage).toBe(true);
+    // expect(block2?.txs[0].status).toBe(true);
   }, 60_000);
 });

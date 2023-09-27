@@ -1,9 +1,9 @@
 import { TestingAppChain } from "@proto-kit/sdk";
 import { Poseidon, PrivateKey, UInt32, Encoding } from "snarkyjs";
-import { NFTKey, NFT } from "./NFT";
+import { NFTKey, NFT } from "../NFT";
 import { log } from "@proto-kit/common";
 
-log.disableAll();
+log.setLevel("silent");
 
 describe("NFTs", () => {
   it("should able to transfer", async () => {
@@ -50,6 +50,6 @@ describe("NFTs", () => {
     const nft1 = await appChain.query.runtime.NFT.records.get(nft1key);
 
     expect(nft1?.owner).toStrictEqual(minter);
-    expect(block1?.txs[0].status, block1?.txs[0].statusMessage).toBe(true);
+    expect(block1?.txs[0].status).toBe(true);
   });
 });

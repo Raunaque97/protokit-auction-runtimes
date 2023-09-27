@@ -14,12 +14,13 @@ interface BalancesConfig {
 
 @runtimeModule()
 export class Balances extends RuntimeModule<BalancesConfig> {
-  @state() public balances = StateMap.from<PublicKey, UInt64>(
-    PublicKey,
-    UInt64
-  );
-
+  @state() public balances!: StateMap<PublicKey, UInt64>;
   @state() public circulatingSupply = State.from<UInt64>(UInt64);
+
+  public constructor() {
+    super();
+    this.balances = StateMap.from<PublicKey, UInt64>(PublicKey, UInt64);
+  }
 
   @runtimeMethod()
   public setBalance(address: PublicKey, amount: UInt64) {
