@@ -56,8 +56,13 @@ export class NFT extends RuntimeModule<{}> {
   public transfer(to: PublicKey, key: NFTKey) {
     const nft = this.records.get(key).value;
     // update the owner to the 'to' address
-    nft.owner = to;
-    this.records.set(key, nft);
+    this.records.set(
+      key,
+      new NFTEntity({ owner: to, metadata: nft.metadata, locked: Bool(false) })
+    );
+
+    // nft.owner = to;
+    // this.records.set(key, nft);
   }
 
   public lock(key: NFTKey) {

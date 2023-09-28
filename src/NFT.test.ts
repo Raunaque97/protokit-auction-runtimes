@@ -78,7 +78,7 @@ describe("NFT", () => {
     const nft2key = NFTKey.from(minter, UInt32.from(1));
     let nft1 = await appChain.query.runtime.NFT.records.get(nft1key);
     let nft2 = await appChain.query.runtime.NFT.records.get(nft2key);
-    expect(nft1?.owner).toStrictEqual(minter);
+    expect(nft1?.owner).toStrictEqual(bob);
     expect(nft2?.owner).toStrictEqual(alice);
 
     // const block2 = await appChain.produceBlock();

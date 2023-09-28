@@ -42,7 +42,7 @@ describe("Balances", () => {
       alice
     );
 
-    expect(block1?.txs[0].status, block1?.txs[0].statusMessage).toBe(true);
+    expect(block1?.txs[0].status).toBe(true);
     expect(aliceBalance?.toBigInt()).toBe(1000n);
   });
 });
