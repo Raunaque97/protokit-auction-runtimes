@@ -47,6 +47,7 @@ describe("NFT", () => {
     );
     await tx1.sign();
     await tx1.send();
+    await appChain.produceBlock();
 
     const tx2 = appChain.transaction(
       minter,
@@ -57,6 +58,7 @@ describe("NFT", () => {
     );
     await tx2.sign();
     await tx2.send();
+    await appChain.produceBlock();
 
     // minter transfers nft1 to bob
     const tx3 = appChain.transaction(
