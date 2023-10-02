@@ -36,13 +36,11 @@ export class DutchAuctionModule extends AuctionModule<DutchAuction> {
 
   @runtimeMethod()
   public start(
-    collectionId: PublicKey,
-    id: UInt32,
+    nftKey: NFTKey,
     startPrice: UInt64,
     decayRate: UInt64,
     minPrice: UInt64 = UInt64.zero
   ) {
-    const nftKey = NFTKey.from(collectionId, id);
     const auction = new DutchAuction({
       nftKey,
       creator: this.transaction.sender,

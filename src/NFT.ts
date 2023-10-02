@@ -43,26 +43,24 @@ export class NFT extends RuntimeModule<{}> {
   }
 
   @runtimeMethod()
-  public transferSigned(to: PublicKey, collectionId: PublicKey, id: UInt32) {
-    const key = NFTKey.from(collectionId, id);
-    const nft = this.records.get(key).value;
+  public transferSigned(to: PublicKey, nftKey: NFTKey) {
+    const nft = this.records.get(nftKey).value;
     // check if sender is the current owner
     assert(nft.owner.equals(this.transaction.sender), "Not owner of NFT");
     // check if the NFT is locked
     assert(nft.locked.not(), "NFT is locked and cannot be transferred");
-    this.transfer(to, key);
+    this.transfer(to, nftKey);
   }
 
   public transfer(to: PublicKey, key: NFTKey) {
     const nft = this.records.get(key).value;
     // update the owner to the 'to' address
-    // this.records.set(
-    //   key,
-    //   new NFTEntity({ owner: to, metadata: nft.metadata, locked: Bool(false) })
-    // );
-
-    nft.owner = to;
-    this.records.set(key, nft);
+    this.records.set(
+      key,
+      new NFTEntity({ owner: to, metadata: nft.metadata, locked: Bool(false) })
+    );
+    // nft.owner = to;
+    // this.records.set(key, nft);
   }
 
   public lock(key: NFTKey) {
