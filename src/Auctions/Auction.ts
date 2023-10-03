@@ -1,4 +1,4 @@
-import { runtimeMethod, RuntimeModule, state } from "@proto-kit/module";
+import { runtimeModule, RuntimeModule, state } from "@proto-kit/module";
 import assert from "assert";
 import { Bool, PublicKey, Struct, UInt64 } from "snarkyjs";
 import { inject } from "tsyringe";

@@ -1,4 +1,9 @@
-import { runtimeMethod, RuntimeModule, state } from "@proto-kit/module";
+import {
+  runtimeMethod,
+  runtimeModule,
+  RuntimeModule,
+  state,
+} from "@proto-kit/module";
 import { StateMap, State } from "@proto-kit/protocol";
 import assert from "assert";
 import { Bool, Field, PublicKey, Struct, UInt64 } from "snarkyjs";
@@ -10,6 +15,7 @@ export class Bids extends Struct({
   price: UInt64,
 }) {}
 
+@runtimeModule()
 export class EnglishAuction extends RuntimeModule<unknown> {
   @state() public askPrices = StateMap.from<NFTKey, UInt64>(NFTKey, UInt64);
   @state() public maxBids = StateMap.from<NFTKey, Bids>(NFTKey, Bids);

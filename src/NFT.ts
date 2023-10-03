@@ -1,4 +1,9 @@
-import { runtimeMethod, RuntimeModule, state } from "@proto-kit/module";
+import {
+  runtimeMethod,
+  runtimeModule,
+  RuntimeModule,
+  state,
+} from "@proto-kit/module";
 import { StateMap } from "@proto-kit/protocol";
 import assert from "assert";
 import { Bool, Field, PublicKey, Struct, UInt32 } from "snarkyjs";
@@ -26,6 +31,7 @@ export class NFTEntity extends Struct({
   }
 }
 
+@runtimeModule()
 export class NFT extends RuntimeModule<{}> {
   @state() public records = StateMap.from<NFTKey, NFTEntity>(NFTKey, NFTEntity);
   @state() public nonces = StateMap.from<PublicKey, UInt32>(PublicKey, UInt32);

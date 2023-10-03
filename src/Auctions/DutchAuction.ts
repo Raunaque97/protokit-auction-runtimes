@@ -1,4 +1,9 @@
-import { runtimeMethod, RuntimeModule, state } from "@proto-kit/module";
+import {
+  runtimeMethod,
+  runtimeModule,
+  RuntimeModule,
+  state,
+} from "@proto-kit/module";
 import assert from "assert";
 import { Bool, Provable, PublicKey, Struct, UInt64 } from "snarkyjs";
 import { inject } from "tsyringe";
@@ -18,6 +23,7 @@ export class DutchAuction extends Struct({
  * starts with a high price,
  * incrementally lowering the price until someone places a bid.
  */
+@runtimeModule()
 export class DutchAuctionModule extends AuctionModule<DutchAuction> {
   public constructor(@inject("NFT") public nft: NFT) {
     super(nft);
