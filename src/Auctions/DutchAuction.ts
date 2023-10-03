@@ -1,16 +1,6 @@
 import { runtimeMethod, RuntimeModule, state } from "@proto-kit/module";
 import assert from "assert";
-import {
-  Bool,
-  Circuit,
-  Field,
-  Provable,
-  PublicKey,
-  State,
-  Struct,
-  UInt32,
-  UInt64,
-} from "snarkyjs";
+import { Bool, Provable, PublicKey, Struct, UInt64 } from "snarkyjs";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
 import { StateMap } from "@proto-kit/protocol";

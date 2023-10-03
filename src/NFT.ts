@@ -77,8 +77,18 @@ export class NFT extends RuntimeModule<{}> {
     this.records.set(key, nft);
   }
 
-  public isLocked(key: NFTKey) {
+  public assertLocked(key: NFTKey) {
     const nft = this.records.get(key).value;
     assert(nft.locked, "NFT is not locked");
+  }
+
+  public assertUnLocked(key: NFTKey) {
+    const nft = this.records.get(key).value;
+    assert(nft.locked.not(), "NFT is locked");
+  }
+
+  public assertAddressOwner(key: NFTKey, address: PublicKey) {
+    const nft = this.records.get(key).value;
+    assert(nft.owner.equals(address), "Not owner of NFT");
   }
 }

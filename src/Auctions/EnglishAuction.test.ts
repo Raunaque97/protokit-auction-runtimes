@@ -2,20 +2,20 @@ import "reflect-metadata";
 import { TestingAppChain } from "@proto-kit/sdk";
 import { Poseidon, PrivateKey, UInt32, Encoding, UInt64 } from "snarkyjs";
 import { NFTKey, NFT } from "../NFT";
-import { DutchAuctionModule } from "./DutchAuction";
+import { EnglishAuction } from "./EnglishAuction";
 import { log } from "@proto-kit/common";
 
 log.setLevel("ERROR");
 
-describe("DutchAuctions", () => {
+describe("EnglishAuction", () => {
   it("should able to auction", async () => {
     const appChain = TestingAppChain.fromRuntime({
       modules: {
-        DutchAuctionModule,
+        EnglishAuction,
         NFT,
       },
       config: {
-        DutchAuctionModule: {},
+        EnglishAuction: {},
         NFT: {},
       },
     });
@@ -28,7 +28,7 @@ describe("DutchAuctions", () => {
     const minterPrivateKey = PrivateKey.random();
     const minter = minterPrivateKey.toPublicKey();
     const nft = appChain.runtime.resolve("NFT");
-    // const dutchAuctions = appChain.runtime.resolve("DutchAuctionModule");
+    const auctions = appChain.runtime.resolve("EnglishAuction");
 
     // minter mints 1 nfts and sets up a auction
     const nftMetadata = Poseidon.hash(
@@ -51,25 +51,24 @@ describe("DutchAuctions", () => {
     let nft0 = await appChain.query.runtime.NFT.records.get(nft0Key);
     expect(nft0?.owner).toStrictEqual(minter); // minter is still owner
     expect(nft0?.locked.toBoolean()).toStrictEqual(false); // nft should be locked
+    // lists for auction
+    tx = appChain.transaction(minter, () => {
+      auctions.listItem(nft0Key, UInt64.from(1000));
+    });
+    await tx.sign();
+    await tx.send();
 
-    // tx = appChain.transaction(minter, () => {
-    //   dutchAuctions.start(nft0Key, UInt64.from(1000), UInt64.from(10));
-    // });
-    // await tx.sign();
-    // await tx.send();
+    await appChain.produceBlock();
 
-    // await appChain.produceBlock();
+    // alice bids after 1 blocks
+    appChain.setSigner(alicePrivateKey);
+    tx = appChain.transaction(minter, () => {
+      auctions.placeBid(nft0Key, UInt64.from(500));
+    });
+    await tx.sign();
+    await tx.send();
+    await appChain.produceBlock();
 
-    // alice bids after 2 blocks
-    // appChain.setSigner(alicePrivateKey);
-    // tx = appChain.transaction(minter, () => {
-    //   dutchAuctions.bid(UInt64.from(0));
-    // });
-    // await tx.sign();
-    // await tx.send();
-    // await appChain.produceBlock();
-
-    // nft0 = await appChain.query.runtime.NFT.records.get(nft0Key);
-    // expect(nft0?.owner).toStrictEqual(alice); // now Alice owns it
+    // minter accepts bid
   });
 });

@@ -16,7 +16,7 @@ export class Auction extends Struct(BaseAuctionData) {}
 
 export abstract class AuctionModule<
   A extends Auction
-> extends RuntimeModule<unknown> {
+> extends RuntimeModule<{}> {
   @state() public records!: StateMap<UInt64, A>;
   @state() public counter = State.from<UInt64>(UInt64);
 
