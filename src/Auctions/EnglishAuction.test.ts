@@ -57,7 +57,6 @@ describe("EnglishAuction", () => {
     });
     await tx.sign();
     await tx.send();
-
     await appChain.produceBlock();
 
     // alice bids after 1 blocks

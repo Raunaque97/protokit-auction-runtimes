@@ -21,15 +21,7 @@ export class NFTEntity extends Struct({
   owner: PublicKey,
   metadata: Field, // ipfs hash
   locked: Bool,
-}) {
-  public lock() {
-    this.locked = Bool(true);
-  }
-
-  public unlock() {
-    this.locked = Bool(false);
-  }
-}
+}) {}
 
 @runtimeModule()
 export class NFT extends RuntimeModule<{}> {
@@ -72,15 +64,13 @@ export class NFT extends RuntimeModule<{}> {
   public lock(key: NFTKey) {
     const nft = this.records.get(key).value;
     // lock the nft
-    nft.lock();
-    this.records.set(key, nft);
+    this.records.set(key, new NFTEntity({ ...nft, locked: Bool(true) }));
   }
 
   public unlock(key: NFTKey) {
     const nft = this.records.get(key).value;
     // lock the nft
-    nft.unlock();
-    this.records.set(key, nft);
+    this.records.set(key, new NFTEntity({ ...nft, locked: Bool(false) }));
   }
 
   public assertLocked(key: NFTKey) {

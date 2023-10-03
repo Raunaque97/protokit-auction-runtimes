@@ -28,7 +28,7 @@ describe("DutchAuctions", () => {
     const minterPrivateKey = PrivateKey.random();
     const minter = minterPrivateKey.toPublicKey();
     const nft = appChain.runtime.resolve("NFT");
-    // const dutchAuctions = appChain.runtime.resolve("DutchAuctionModule");
+    const auctions = appChain.runtime.resolve("DutchAuctionModule");
 
     // minter mints 1 nfts and sets up a auction
     const nftMetadata = Poseidon.hash(
@@ -52,22 +52,21 @@ describe("DutchAuctions", () => {
     expect(nft0?.owner).toStrictEqual(minter); // minter is still owner
     expect(nft0?.locked.toBoolean()).toStrictEqual(false); // nft should be locked
 
-    // tx = appChain.transaction(minter, () => {
-    //   dutchAuctions.start(nft0Key, UInt64.from(1000), UInt64.from(10));
-    // });
-    // await tx.sign();
-    // await tx.send();
+    tx = appChain.transaction(minter, () => {
+      auctions.start(nft0Key, UInt64.from(1000), UInt64.from(10), UInt64.zero);
+    });
+    await tx.sign();
+    await tx.send();
+    await appChain.produceBlock();
 
-    // await appChain.produceBlock();
-
-    // alice bids after 2 blocks
-    // appChain.setSigner(alicePrivateKey);
-    // tx = appChain.transaction(minter, () => {
-    //   dutchAuctions.bid(UInt64.from(0));
-    // });
-    // await tx.sign();
-    // await tx.send();
-    // await appChain.produceBlock();
+    // alice bids after 1 blocks
+    appChain.setSigner(alicePrivateKey);
+    tx = appChain.transaction(minter, () => {
+      auctions.bid(UInt64.from(0));
+    });
+    await tx.sign();
+    await tx.send();
+    await appChain.produceBlock();
 
     // nft0 = await appChain.query.runtime.NFT.records.get(nft0Key);
     // expect(nft0?.owner).toStrictEqual(alice); // now Alice owns it

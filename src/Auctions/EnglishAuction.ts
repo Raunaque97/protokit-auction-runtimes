@@ -46,7 +46,7 @@ export class EnglishAuction extends RuntimeModule<unknown> {
     });
     const maxBid = this.maxBids.get(nftKey).value;
     assert(
-      currentBid.price.assertGreaterThan(maxBid.price),
+      currentBid.price.greaterThan(maxBid.price),
       "Bid must be higher than previous bid"
     );
     this.maxBids.set(nftKey, currentBid);
