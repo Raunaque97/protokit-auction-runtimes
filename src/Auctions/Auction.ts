@@ -31,16 +31,14 @@ export abstract class AuctionModule<
   public createAuction(auction: A) {
     this.records.set(this.counter.get().value, auction);
     this.counter.set(this.counter.get().value.add(1));
-    const nftToAuction = this.nft.records.get(auction.nftKey).value;
-    assert(
-      this.transaction.sender.equals(nftToAuction.owner),
-      "You are not the owner"
-    );
+
+    const nftKey = auction.nftKey;
+    this.nft.assertAddressOwner(nftKey, this.transaction.sender);
     // check if the nft is unlocked
-    assert(nftToAuction.locked.not(), "NFT is locked");
+    this.nft.assertUnLocked(auction.nftKey);
+
     // lock the nft
-    // this.nft.lock(nftKey); // TODO test both
-    nftToAuction.lock();
+    this.nft.lock(auction.nftKey);
   }
 
   /**
@@ -51,11 +49,10 @@ export abstract class AuctionModule<
   public endAuction(id: UInt64, winner: PublicKey) {
     winner.isEmpty().assertFalse("Winner cannot be empty");
     const auction = this.records.get(id).value;
-    auction.ended = Bool(true);
-    auction.winner = winner;
-    this.records.set(id, auction); // TODO check if this is needed
-    const auctionedNFT = this.nft.records.get(auction.nftKey).value;
-    auctionedNFT.owner = winner;
-    auctionedNFT.unlock();
+    this.records.set(id, { ...auction, ended: Bool(true), winner }); // TODO check if this is needed
+    // transfer the nft to new owner
+    this.nft.transfer(winner, auction.nftKey);
+    // unlock the nft
+    this.nft.unlock(auction.nftKey);
   }
 }

@@ -47,7 +47,6 @@ export class DutchAuctionModule extends AuctionModule<DutchAuction> {
       decayRate,
       minPrice,
     });
-    auction;
     this.createAuction(auction);
   }
 
@@ -66,6 +65,7 @@ export class DutchAuctionModule extends AuctionModule<DutchAuction> {
       auction.minPrice,
       auction.startPrice.sub(decay)
     );
+    // console.log("Final prize", finalPrice.toString());
     // TODO do token transfer
     this.endAuction(auctionId, this.transaction.sender);
   }
