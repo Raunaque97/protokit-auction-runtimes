@@ -75,6 +75,7 @@ export class MockDepositProof extends Struct({
   public verifyIf(condition: Bool) {}
 }
 
+// TODO: replace mockProofs later
 @runtimeModule()
 export class PrivateToken extends RuntimeModule<unknown> {
   // ledger of latest known publicKey - balances
@@ -87,7 +88,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
   @state() public nounces = StateMap.from<PublicKey, UInt64>(PublicKey, UInt64);
 
   @runtimeMethod()
-  public transfer(transferProof: TransferProof | MockTransferProof) {
+  public transfer(transferProof: MockTransferProof) {
     const transferProofOutput = transferProof.publicOutput;
     transferProof.verify();
     /**
@@ -132,7 +133,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
   }
 
   @runtimeMethod()
-  public addClaim(claimKey: ClaimKey, claimProof: ClaimProof | MockClaimProof) {
+  public addClaim(claimKey: ClaimKey, claimProof: MockClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     //
@@ -178,10 +179,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * @param claimProof
    */
   @runtimeMethod()
-  public addFirstClaim(
-    claimKey: ClaimKey,
-    claimProof: ClaimProof | MockClaimProof
-  ) {
+  public addFirstClaim(claimKey: ClaimKey, claimProof: MockClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     // is this needed? a claimProof shows they can decrypt it
@@ -229,9 +227,9 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * TODO
    */
   @runtimeMethod()
-  public deposit(depositProof: DepositProof | MockDepositProof) {
-    depositProof.verify();
+  public deposit(depositProof: MockDepositProof) {
     // TODO
+    depositProof.verify();
     this.ledger.set(this.transaction.sender, depositProof.publicOutput);
   }
 }

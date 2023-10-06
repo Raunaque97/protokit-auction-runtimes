@@ -1,12 +1,17 @@
+import "reflect-metadata";
 import { TestingAppChain } from "@proto-kit/sdk";
-import { Field, PrivateKey, UInt64 } from "snarkyjs";
+import { Field, PrivateKey, UInt64, Encryption } from "snarkyjs";
 import { log } from "@proto-kit/common";
-import { PrivateToken } from "./PrivateToken";
+import {
+  EncryptedBalance,
+  MockDepositProof,
+  PrivateToken,
+} from "./PrivateToken";
 
 log.setLevel("ERROR");
 
-describe("Balances", () => {
-  it("should demonstrate how balances work", async () => {
+describe("Private Token", () => {
+  it("should demonstrate how deposit, transfer, claim works", async () => {
     const totalSupply = UInt64.from(10_000);
 
     const appChain = TestingAppChain.fromRuntime({
@@ -17,27 +22,50 @@ describe("Balances", () => {
         PrivateToken: {},
       },
     });
-
     await appChain.start();
 
     const alicePrivateKey = PrivateKey.random();
     const alice = alicePrivateKey.toPublicKey();
-
-    appChain.setSigner(alicePrivateKey);
+    const bobPrivateKey = PrivateKey.random();
+    const bob = bobPrivateKey.toPublicKey();
 
     const privateToken = appChain.runtime.resolve("PrivateToken");
+    const queryModule = appChain.query.runtime.PrivateToken;
 
-    // deposit
-    let tx = appChain.transaction(alice, () => {});
-
-    // await tx1.sign();
-    // await tx1.send();
-    // appChain.produceBlock();
-
-    const x = await appChain.query.runtime.PrivateToken.claims.get(
-      Field.from(0)
+    // Alice deposits 100
+    appChain.setSigner(alicePrivateKey);
+    const depositProof = new MockDepositProof({
+      publicOutput: EncryptedBalance.from(UInt64.from(100), alice),
+    });
+    console.log(
+      "correct ",
+      depositProof.publicOutput.val.length,
+      depositProof.publicOutput.val[0].toBigInt(),
+      depositProof.publicOutput.val[1].toBigInt()
     );
+    let tx = appChain.transaction(alice, () => {
+      privateToken.deposit(depositProof);
+    });
+    await tx.sign();
+    await tx.send();
+    await appChain.produceBlock();
 
-    console.log("x", x);
+    const aliceBalance = (await queryModule.ledger.get(
+      alice
+    )) as EncryptedBalance;
+    console.log(
+      "final ",
+      aliceBalance?.val.length,
+      aliceBalance?.val[0]?.toBigInt(),
+      aliceBalance?.val[1]?.toBigInt()
+    );
+    expect(
+      UInt64.fromFields(
+        Encryption.decrypt(
+          { publicKey: alice.toGroup(), cipherText: aliceBalance.val },
+          alicePrivateKey
+        )
+      )
+    ).toBe(UInt64.from(100));
   });
 });
