@@ -6,6 +6,7 @@ import {
 } from "@proto-kit/module";
 import { assert, StateMap } from "@proto-kit/protocol";
 import {
+  Bool,
   Encryption,
   Field,
   Poseidon,
@@ -44,6 +45,12 @@ export class TransferProofOutput extends Struct({
   amount: EncryptedBalance, // encrypted with 'to' address
 }) {}
 export class TransferProof extends Proof<unknown, TransferProofOutput> {}
+export class MockTransferProof extends Struct({
+  publicOutput: TransferProofOutput,
+}) {
+  public verify() {}
+  public verifyIf(condition: Bool) {}
+}
 
 // currentBalance + amount == resultingBalance
 export class ClaimProofOutput extends Struct({
@@ -53,8 +60,20 @@ export class ClaimProofOutput extends Struct({
   amount: EncryptedBalance, // encrypted with 'owner' address
 }) {}
 export class ClaimProof extends Proof<unknown, ClaimProofOutput> {}
+export class MockClaimProof extends Struct({
+  publicOutput: ClaimProofOutput,
+}) {
+  public verify() {}
+  public verifyIf(condition: Bool) {}
+}
 
 export class DepositProof extends Proof<unknown, EncryptedBalance> {}
+export class MockDepositProof extends Struct({
+  publicOutput: EncryptedBalance,
+}) {
+  public verify() {}
+  public verifyIf(condition: Bool) {}
+}
 
 @runtimeModule()
 export class PrivateToken extends RuntimeModule<unknown> {
@@ -68,7 +87,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
   @state() public nounces = StateMap.from<PublicKey, UInt64>(PublicKey, UInt64);
 
   @runtimeMethod()
-  public transfer(transferProof: TransferProof) {
+  public transfer(transferProof: TransferProof | MockTransferProof) {
     const transferProofOutput = transferProof.publicOutput;
     transferProof.verify();
     /**
@@ -113,7 +132,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
   }
 
   @runtimeMethod()
-  public addClaim(claimKey: ClaimKey, claimProof: ClaimProof) {
+  public addClaim(claimKey: ClaimKey, claimProof: ClaimProof | MockClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     //
@@ -159,7 +178,10 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * @param claimProof
    */
   @runtimeMethod()
-  public addFirstClaim(claimKey: ClaimKey, claimProof: ClaimProof) {
+  public addFirstClaim(
+    claimKey: ClaimKey,
+    claimProof: ClaimProof | MockClaimProof
+  ) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     // is this needed? a claimProof shows they can decrypt it
@@ -207,7 +229,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * TODO
    */
   @runtimeMethod()
-  public deposit(depositProof: DepositProof) {
+  public deposit(depositProof: DepositProof | MockDepositProof) {
     depositProof.verify();
     // TODO
     this.ledger.set(this.transaction.sender, depositProof.publicOutput);
