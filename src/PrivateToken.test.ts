@@ -3,6 +3,7 @@ import { TestingAppChain } from "@proto-kit/sdk";
 import { Field, PrivateKey, UInt64, Encryption } from "snarkyjs";
 import { log } from "@proto-kit/common";
 import {
+  ClaimKey,
   EncryptedBalance,
   MockDepositProof,
   PrivateToken,
@@ -12,8 +13,6 @@ log.setLevel("ERROR");
 
 describe("Private Token", () => {
   it("should demonstrate how deposit, transfer, claim works", async () => {
-    const totalSupply = UInt64.from(10_000);
-
     const appChain = TestingAppChain.fromRuntime({
       modules: {
         PrivateToken,
@@ -35,37 +34,28 @@ describe("Private Token", () => {
     // Alice deposits 100
     appChain.setSigner(alicePrivateKey);
     const depositProof = new MockDepositProof({
-      publicOutput: EncryptedBalance.from(UInt64.from(100), alice),
+      publicOutput: {
+        rootHash: Field(0),
+        nullifierHash: Field(0),
+        to: alice,
+        amount: EncryptedBalance.from(UInt64.from(100), alice), // encrypted with 'to' address
+      },
     });
-    console.log(
-      "correct ",
-      depositProof.publicOutput.val.length,
-      depositProof.publicOutput.val[0].toBigInt(),
-      depositProof.publicOutput.val[1].toBigInt()
-    );
     let tx = appChain.transaction(alice, () => {
-      privateToken.deposit(depositProof);
+      privateToken.addDeposit(depositProof);
     });
     await tx.sign();
     await tx.send();
     await appChain.produceBlock();
 
-    const aliceBalance = (await queryModule.ledger.get(
-      alice
+    const aliceBalance = (await queryModule.claims.get(
+      ClaimKey.from(alice, UInt64.from(0))
     )) as EncryptedBalance;
-    console.log(
-      "final ",
-      aliceBalance?.val.length,
-      aliceBalance?.val[0]?.toBigInt(),
-      aliceBalance?.val[1]?.toBigInt()
-    );
+
     expect(
       UInt64.fromFields(
-        Encryption.decrypt(
-          { publicKey: alice.toGroup(), cipherText: aliceBalance.val },
-          alicePrivateKey
-        )
-      )
-    ).toBe(UInt64.from(100));
+        Encryption.decrypt(aliceBalance, alicePrivateKey)
+      ).toBigInt()
+    ).toBe(100n);
   });
 });

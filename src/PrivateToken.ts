@@ -9,6 +9,7 @@ import {
   Bool,
   Encryption,
   Field,
+  Group,
   Poseidon,
   Proof,
   PublicKey,
@@ -16,14 +17,23 @@ import {
   UInt64,
 } from "snarkyjs";
 
-// encrypted (Field[]) + hashed into a single Field
+// publicKey acts like salt,
+// `Encryption.encrypt(..)` randomly generates the publicKey & is required during decryption
 export class EncryptedBalance extends Struct({
-  val: [Field], // TODO array size 2
+  publicKey: Group,
+  cipherText: [Field, Field],
 }) {
   public static from(amount: UInt64, publicKey: PublicKey) {
-    return new EncryptedBalance({
-      val: Encryption.encrypt(amount.toFields(), publicKey).cipherText,
-    });
+    return new EncryptedBalance(
+      Encryption.encrypt(amount.toFields(), publicKey)
+    );
+  }
+
+  public equals(other: EncryptedBalance): Bool {
+    return this.publicKey
+      .equals(other.publicKey)
+      .and(this.cipherText[0].equals(other.cipherText[0]))
+      .and(this.cipherText[1].equals(other.cipherText[1]));
   }
 }
 
@@ -66,10 +76,15 @@ export class MockClaimProof extends Struct({
   public verify() {}
   public verifyIf(condition: Bool) {}
 }
-
+export class DepositProofOutput extends Struct({
+  rootHash: Field,
+  nullifierHash: Field,
+  to: PublicKey,
+  amount: EncryptedBalance, // encrypted with 'to' address
+}) {}
 export class DepositProof extends Proof<unknown, EncryptedBalance> {}
 export class MockDepositProof extends Struct({
-  publicOutput: EncryptedBalance,
+  publicOutput: DepositProofOutput,
 }) {
   public verify() {}
   public verifyIf(condition: Bool) {}
@@ -78,13 +93,16 @@ export class MockDepositProof extends Struct({
 // TODO: replace mockProofs later
 @runtimeModule()
 export class PrivateToken extends RuntimeModule<unknown> {
-  // ledger of latest known publicKey - balances
-  @state() public ledger = StateMap.from(PublicKey, EncryptedBalance);
-
+  @state() public ledger = StateMap.from<PublicKey, EncryptedBalance>(
+    PublicKey,
+    EncryptedBalance
+  );
   // unspent claims, like unspent outputs?
-  @state() public claims = StateMap.from(ClaimKey, EncryptedBalance);
-
-  // nounce counter per user.
+  @state() public claims = StateMap.from<ClaimKey, EncryptedBalance>(
+    ClaimKey,
+    EncryptedBalance
+  );
+  // a counter per user for each new claim
   @state() public nounces = StateMap.from<PublicKey, UInt64>(PublicKey, UInt64);
 
   @runtimeMethod()
@@ -92,23 +110,14 @@ export class PrivateToken extends RuntimeModule<unknown> {
     const transferProofOutput = transferProof.publicOutput;
     transferProof.verify();
     /**
-     * Check that the user transfering knows their own balance
-     * by being able to decrypt the publicly known/stored balance
+     * Check that the transferProof's innitial balance matches
+     * with the known/stored balance on chain.
      */
-    const currentBalance = this.ledger.get(transferProofOutput.owner);
+    const currentBalance = this.ledger.get(transferProofOutput.owner).value;
     assert(
-      transferProofOutput.currentBalance.val[0].equals(
-        currentBalance.value.val[0]
-      ),
+      transferProofOutput.currentBalance.equals(currentBalance),
       "Proven encrypted balance does not match current known encrypted balance"
     );
-    assert(
-      transferProofOutput.currentBalance.val[0].equals(
-        currentBalance.value.val[1]
-      ),
-      "Proven encrypted balance does not match current known encrypted balance"
-    );
-
     /**
      * Update the encrypted balance stored in the ledger using
      * the calculated values from the proof
@@ -136,16 +145,16 @@ export class PrivateToken extends RuntimeModule<unknown> {
   public addClaim(claimKey: ClaimKey, claimProof: MockClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
-    //
-    assert(claimKey.recipient.equals(claimProofOutput.owner)); // is this needed? a claimProof shows they can decrypt it
+    // claimProof shows they can decrypt the claim
+    assert(claimKey.recipient.equals(claimProofOutput.owner)); // only intended receipent can add
 
+    /**
+     * Check that the claimProof's innitial balance matches
+     * with the known/stored balance on chain.
+     */
     const currentBalance = this.ledger.get(claimProofOutput.owner).value;
     assert(
-      claimProofOutput.currentBalance.val[0].equals(currentBalance.val[0]),
-      "Proven encrypted balance does not match current known encrypted balance"
-    );
-    assert(
-      claimProofOutput.currentBalance.val[0].equals(currentBalance.val[1]),
+      claimProofOutput.currentBalance.equals(currentBalance),
       "Proven encrypted balance does not match current known encrypted balance"
     );
     /**
@@ -153,17 +162,12 @@ export class PrivateToken extends RuntimeModule<unknown> {
      * the calculated values from the proof
      */
     this.ledger.set(claimProofOutput.owner, claimProofOutput.resultingBalance);
-
     /**
      * the Claim spend should have the same balance as in the claimProof
      */
     const claim = this.claims.get(claimKey).value;
     assert(
-      claim.val[0].equals(claimProofOutput.amount.val[0]),
-      "claim amount does not match claimProof amount"
-    );
-    assert(
-      claim.val[0].equals(claimProofOutput.amount.val[1]),
+      claim.equals(claimProofOutput.amount),
       "claim amount does not match claimProof amount"
     );
     // update the claim to prevent double spent
@@ -172,7 +176,6 @@ export class PrivateToken extends RuntimeModule<unknown> {
       EncryptedBalance.from(UInt64.zero, PublicKey.empty())
     );
   }
-
   /**
    * When your current balance is 0
    * @param claimKey
@@ -182,37 +185,24 @@ export class PrivateToken extends RuntimeModule<unknown> {
   public addFirstClaim(claimKey: ClaimKey, claimProof: MockClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
-    // is this needed? a claimProof shows they can decrypt it
+    // only intended receipent can add
     assert(claimKey.recipient.equals(claimProofOutput.owner));
-
-    // TODO: check stored balance should be undefined.
-
-    /**
-     * account should start with zero balance
-     */
-    const zeroBalance = EncryptedBalance.from(
-      UInt64.zero,
-      claimProofOutput.owner
+    // check stored balance should be undefined.
+    assert(
+      this.ledger.get(claimProofOutput.owner).isSome.not(),
+      "Not first time"
     );
-    assert(claimProofOutput.currentBalance.val[0].equals(zeroBalance.val[0]));
-    assert(claimProofOutput.currentBalance.val[1].equals(zeroBalance.val[1]));
-
     /**
-     * Update the encrypted balance stored in the ledger using
-     * the calculated values from the proof
+     * Update the encrypted balance in the ledger directly
+     * with claim amount as account starts with Zero
      */
-    this.ledger.set(claimProofOutput.owner, claimProofOutput.resultingBalance);
-
+    this.ledger.set(claimProofOutput.owner, claimProofOutput.amount);
     /**
      * the Claim spend should have the same balance as in the claimProof
      */
     const claim = this.claims.get(claimKey).value;
     assert(
-      claim.val[0].equals(claimProofOutput.amount.val[0]),
-      "claim amount does not match claimProof amount"
-    );
-    assert(
-      claim.val[0].equals(claimProofOutput.amount.val[1]),
+      claim.equals(claimProofOutput.amount),
       "claim amount does not match claimProof amount"
     );
     // update the claim to prevent double spent
@@ -221,15 +211,25 @@ export class PrivateToken extends RuntimeModule<unknown> {
       EncryptedBalance.from(UInt64.zero, PublicKey.empty())
     );
   }
-
   /**
    * deposit normal token to get private Token
    * TODO
    */
   @runtimeMethod()
-  public deposit(depositProof: MockDepositProof) {
-    // TODO
+  public addDeposit(depositProof: MockDepositProof) {
+    // console.log(
+    //   "deposit ",
+    //   depositProof.publicOutput.val.length,
+    //   depositProof.publicOutput.val[0]?.toBigInt(),
+    //   depositProof.publicOutput.val[1]?.toBigInt()
+    // );
+    const proofOutput = depositProof.publicOutput;
     depositProof.verify();
-    this.ledger.set(this.transaction.sender, depositProof.publicOutput);
+    const to = proofOutput.to;
+    const claimKey = ClaimKey.from(to, this.nounces.get(to).value);
+    // update nounce
+    this.nounces.set(to, this.nounces.get(to).value.add(1));
+    // store the claim so it can be claimed later
+    this.claims.set(claimKey, proofOutput.amount);
   }
 }
