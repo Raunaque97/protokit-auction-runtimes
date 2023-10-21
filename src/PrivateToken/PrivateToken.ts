@@ -5,37 +5,13 @@ import {
   state,
 } from "@proto-kit/module";
 import { assert, StateMap } from "@proto-kit/protocol";
+import { PublicKey, Struct, UInt64 } from "snarkyjs";
 import {
-  Bool,
-  Encryption,
-  Field,
-  Group,
-  Poseidon,
-  Proof,
-  PublicKey,
-  Struct,
-  UInt64,
-} from "snarkyjs";
-
-// publicKey acts like salt,
-// `Encryption.encrypt(..)` randomly generates the publicKey & is required during decryption
-export class EncryptedBalance extends Struct({
-  publicKey: Group,
-  cipherText: [Field, Field],
-}) {
-  public static from(amount: UInt64, publicKey: PublicKey) {
-    return new EncryptedBalance(
-      Encryption.encrypt(amount.toFields(), publicKey)
-    );
-  }
-
-  public equals(other: EncryptedBalance): Bool {
-    return this.publicKey
-      .equals(other.publicKey)
-      .and(this.cipherText[0].equals(other.cipherText[0]))
-      .and(this.cipherText[1].equals(other.cipherText[1]));
-  }
-}
+  EncryptedBalance,
+  MockClaimProof,
+  MockDepositProof,
+  MockTransferProof,
+} from "./Proofs";
 
 export class ClaimKey extends Struct({
   recipient: PublicKey,
@@ -44,50 +20,6 @@ export class ClaimKey extends Struct({
   public static from(recipient: PublicKey, index: UInt64) {
     return new ClaimKey({ recipient, index });
   }
-}
-
-// currentBalance == resultingBalance + amount
-export class TransferProofOutput extends Struct({
-  owner: PublicKey,
-  to: PublicKey,
-  currentBalance: EncryptedBalance,
-  resultingBalance: EncryptedBalance,
-  amount: EncryptedBalance, // encrypted with 'to' address
-}) {}
-export class TransferProof extends Proof<unknown, TransferProofOutput> {}
-export class MockTransferProof extends Struct({
-  publicOutput: TransferProofOutput,
-}) {
-  public verify() {}
-  public verifyIf(condition: Bool) {}
-}
-
-// currentBalance + amount == resultingBalance
-export class ClaimProofOutput extends Struct({
-  owner: PublicKey,
-  currentBalance: EncryptedBalance,
-  resultingBalance: EncryptedBalance,
-  amount: EncryptedBalance, // encrypted with 'owner' address
-}) {}
-export class ClaimProof extends Proof<unknown, ClaimProofOutput> {}
-export class MockClaimProof extends Struct({
-  publicOutput: ClaimProofOutput,
-}) {
-  public verify() {}
-  public verifyIf(condition: Bool) {}
-}
-export class DepositProofOutput extends Struct({
-  rootHash: Field,
-  nullifierHash: Field,
-  to: PublicKey,
-  amount: EncryptedBalance, // encrypted with 'to' address
-}) {}
-export class DepositProof extends Proof<unknown, EncryptedBalance> {}
-export class MockDepositProof extends Struct({
-  publicOutput: DepositProofOutput,
-}) {
-  public verify() {}
-  public verifyIf(condition: Bool) {}
 }
 
 // TODO: replace mockProofs later
@@ -171,10 +103,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
       "claim amount does not match claimProof amount"
     );
     // update the claim to prevent double spent
-    this.claims.set(
-      claimKey,
-      EncryptedBalance.from(UInt64.zero, PublicKey.empty())
-    );
+    this.claims.set(claimKey, EncryptedBalance.empty());
   }
   /**
    * When your current balance is 0
@@ -186,7 +115,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     // only intended receipent can add
-    assert(claimKey.recipient.equals(claimProofOutput.owner));
+    assert(claimKey.recipient.equals(claimProofOutput.owner), "wrong owner");
     // check stored balance should be undefined.
     assert(
       this.ledger.get(claimProofOutput.owner).isSome.not(),
@@ -206,10 +135,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
       "claim amount does not match claimProof amount"
     );
     // update the claim to prevent double spent
-    this.claims.set(
-      claimKey,
-      EncryptedBalance.from(UInt64.zero, PublicKey.empty())
-    );
+    this.claims.set(claimKey, EncryptedBalance.empty());
   }
   /**
    * deposit normal token to get private Token
@@ -217,12 +143,6 @@ export class PrivateToken extends RuntimeModule<unknown> {
    */
   @runtimeMethod()
   public addDeposit(depositProof: MockDepositProof) {
-    // console.log(
-    //   "deposit ",
-    //   depositProof.publicOutput.val.length,
-    //   depositProof.publicOutput.val[0]?.toBigInt(),
-    //   depositProof.publicOutput.val[1]?.toBigInt()
-    // );
     const proofOutput = depositProof.publicOutput;
     depositProof.verify();
     const to = proofOutput.to;
