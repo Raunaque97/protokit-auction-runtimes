@@ -103,6 +103,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
       "claim amount does not match claimProof amount"
     );
     // update the claim to prevent double spent
+    // TODO use .delete
     this.claims.set(claimKey, EncryptedBalance.empty());
   }
   /**
@@ -135,6 +136,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
       "claim amount does not match claimProof amount"
     );
     // update the claim to prevent double spent
+    // TODO use .delete
     this.claims.set(claimKey, EncryptedBalance.empty());
   }
   /**

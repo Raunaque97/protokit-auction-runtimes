@@ -49,7 +49,7 @@ describe("Private Token", () => {
     await tx.send();
     await appChain.produceBlock();
 
-    const aliceClaimBalance = (await queryModule.claims.get(
+    let aliceClaimBalance = (await queryModule.claims.get(
       ClaimKey.from(alice, UInt64.from(0))
     )) as EncryptedBalance;
 
@@ -81,7 +81,18 @@ describe("Private Token", () => {
     let aliceBalance = (await queryModule.ledger.get(
       alice
     )) as EncryptedBalance;
-    console.log("aliceBalance", aliceBalance);
+    // console.log(
+    //   "aliceBalance",
+    //   UInt64.fromFields(
+    //     Encryption.decrypt(aliceBalance, alicePrivateKey)
+    //   ).toBigInt()
+    // );
+    // console.log(
+    //   "aliceBalance",
+    //   UInt64.fromFields(
+    //     Encryption.decrypt(aliceBalance, alicePrivateKey)
+    //   ).toBigInt()
+    // );
     expect(
       UInt64.fromFields(
         Encryption.decrypt(aliceBalance, alicePrivateKey)
@@ -107,10 +118,16 @@ describe("Private Token", () => {
 
     aliceBalance = (await queryModule.ledger.get(alice)) as EncryptedBalance;
     console.log("aliceBalance", aliceBalance);
+
     let bobClaimBalance = (await queryModule.claims.get(
       ClaimKey.from(bob, UInt64.from(0))
     )) as EncryptedBalance;
-    console.log("bobClaimBalance", bobClaimBalance);
+    // console.log(
+    //   "bobClaimBalance",
+    //   UInt64.fromFields(
+    //     Encryption.decrypt(bobClaimBalance, bobPrivateKey)
+    //   ).toBigInt()
+    // );
     expect(
       UInt64.fromFields(
         Encryption.decrypt(aliceBalance, alicePrivateKey)
@@ -121,5 +138,29 @@ describe("Private Token", () => {
         Encryption.decrypt(bobClaimBalance, bobPrivateKey)
       ).toBigInt()
     ).toBe(10n);
+
+    // alice deposits and add claim again
+    // tx = appChain.transaction(alice, () => {
+    //   privateToken.addDeposit(depositProof);
+    // });
+    // await tx.sign();
+    // await tx.send();
+    aliceClaimBalance = (await queryModule.claims.get(
+      ClaimKey.from(alice, UInt64.from(0))
+    )) as EncryptedBalance;
+    // console.log(
+    //   "aliceClaimBalance",
+    //   UInt64.fromFields(
+    //     Encryption.decrypt(aliceClaimBalance, alicePrivateKey)
+    //   ).toBigInt()
+    // );
+
+    tx = appChain.transaction(alice, () => {
+      privateToken.addClaim(ClaimKey.from(alice, UInt64.from(0)), claimProof);
+    });
+    await tx.sign();
+    await tx.send();
+
+    await appChain.produceBlock();
   });
 });
