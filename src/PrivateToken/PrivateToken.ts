@@ -5,7 +5,7 @@ import {
   state,
 } from "@proto-kit/module";
 import { assert, StateMap } from "@proto-kit/protocol";
-import { PublicKey, Struct, UInt64 } from "snarkyjs";
+import { Provable, PublicKey, Struct, UInt64 } from "snarkyjs";
 import {
   EncryptedBalance,
   MockClaimProof,
@@ -122,6 +122,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
       this.ledger.get(claimProofOutput.owner).isSome.not(),
       "Not first time"
     );
+    Provable.log();
     /**
      * Update the encrypted balance in the ledger directly
      * with claim amount as account starts with Zero

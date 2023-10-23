@@ -1,8 +1,10 @@
 import "reflect-metadata";
 import { TestingAppChain } from "@proto-kit/sdk";
-import { Field, PrivateKey, UInt64, Encryption } from "snarkyjs";
+import { Field, PrivateKey, UInt64 } from "snarkyjs";
 import { log } from "@proto-kit/common";
 import { ClaimKey, PrivateToken } from "./PrivateToken";
+import { PrivateMempool } from "@proto-kit/sequencer";
+
 import {
   EncryptedBalance,
   MockClaimProof,
@@ -23,6 +25,8 @@ describe("Private Token", () => {
       },
     });
     await appChain.start();
+
+    appChain.sequencer.resolveOrFail("Mempool", PrivateMempool).getTxs();
 
     const alicePrivateKey = PrivateKey.random();
     const alice = alicePrivateKey.toPublicKey();
@@ -53,11 +57,7 @@ describe("Private Token", () => {
       ClaimKey.from(alice, UInt64.from(0))
     )) as EncryptedBalance;
 
-    expect(
-      UInt64.fromFields(
-        Encryption.decrypt(aliceClaimBalance, alicePrivateKey)
-      ).toBigInt()
-    ).toBe(100n);
+    expect(aliceClaimBalance.decrypt(alicePrivateKey).toBigInt()).toBe(100n);
 
     // alice addClaims
     const claimProof = new MockClaimProof({
@@ -81,23 +81,11 @@ describe("Private Token", () => {
     let aliceBalance = (await queryModule.ledger.get(
       alice
     )) as EncryptedBalance;
-    // console.log(
-    //   "aliceBalance",
-    //   UInt64.fromFields(
-    //     Encryption.decrypt(aliceBalance, alicePrivateKey)
-    //   ).toBigInt()
-    // );
-    // console.log(
-    //   "aliceBalance",
-    //   UInt64.fromFields(
-    //     Encryption.decrypt(aliceBalance, alicePrivateKey)
-    //   ).toBigInt()
-    // );
-    expect(
-      UInt64.fromFields(
-        Encryption.decrypt(aliceBalance, alicePrivateKey)
-      ).toBigInt()
-    ).toBe(100n);
+    console.log(
+      "aliceBalance",
+      aliceBalance.decrypt(alicePrivateKey).toBigInt()
+    );
+    expect(aliceBalance.decrypt(alicePrivateKey).toBigInt()).toBe(100n);
 
     // alice sends some to bob
     const transferProof = new MockTransferProof({
@@ -117,50 +105,39 @@ describe("Private Token", () => {
     await appChain.produceBlock();
 
     aliceBalance = (await queryModule.ledger.get(alice)) as EncryptedBalance;
-    console.log("aliceBalance", aliceBalance);
 
     let bobClaimBalance = (await queryModule.claims.get(
       ClaimKey.from(bob, UInt64.from(0))
     )) as EncryptedBalance;
-    // console.log(
-    //   "bobClaimBalance",
-    //   UInt64.fromFields(
-    //     Encryption.decrypt(bobClaimBalance, bobPrivateKey)
-    //   ).toBigInt()
-    // );
-    expect(
-      UInt64.fromFields(
-        Encryption.decrypt(aliceBalance, alicePrivateKey)
-      ).toBigInt()
-    ).toBe(90n);
-    expect(
-      UInt64.fromFields(
-        Encryption.decrypt(bobClaimBalance, bobPrivateKey)
-      ).toBigInt()
-    ).toBe(10n);
+    console.log(
+      "bobClaimBalance",
+      bobClaimBalance.decrypt(bobPrivateKey).toBigInt()
+    );
+    expect(aliceBalance.decrypt(alicePrivateKey).toBigInt()).toBe(90n);
+    expect(bobClaimBalance.decrypt(bobPrivateKey).toBigInt()).toBe(10n);
 
     // alice deposits and add claim again
-    // tx = appChain.transaction(alice, () => {
-    //   privateToken.addDeposit(depositProof);
-    // });
-    // await tx.sign();
-    // await tx.send();
+    tx = appChain.transaction(alice, () => {
+      privateToken.addDeposit(depositProof);
+    });
+    await tx.sign();
+    await tx.send();
     aliceClaimBalance = (await queryModule.claims.get(
       ClaimKey.from(alice, UInt64.from(0))
     )) as EncryptedBalance;
-    // console.log(
-    //   "aliceClaimBalance",
-    //   UInt64.fromFields(
-    //     Encryption.decrypt(aliceClaimBalance, alicePrivateKey)
-    //   ).toBigInt()
-    // );
+    console.log("should be 0: ", aliceClaimBalance.cipherText[0].toBigInt());
 
     tx = appChain.transaction(alice, () => {
       privateToken.addClaim(ClaimKey.from(alice, UInt64.from(0)), claimProof);
     });
     await tx.sign();
     await tx.send();
-
     await appChain.produceBlock();
+
+    aliceBalance = (await queryModule.ledger.get(alice)) as EncryptedBalance;
+    console.log(
+      "aliceBalance",
+      aliceBalance.decrypt(alicePrivateKey).toBigInt()
+    );
   });
 });

@@ -3,6 +3,7 @@ import {
   Encryption,
   Field,
   Group,
+  PrivateKey,
   Proof,
   PublicKey,
   Struct,
@@ -20,6 +21,13 @@ export class EncryptedBalance extends Struct({
       Encryption.encrypt(amount.toFields(), publicKey)
     );
   }
+  // TODO remove later
+  static empty() {
+    return new EncryptedBalance({
+      publicKey: Group.zero,
+      cipherText: [Field(0), Field(0)],
+    });
+  }
 
   public equals(other: EncryptedBalance): Bool {
     return this.publicKey
@@ -28,11 +36,12 @@ export class EncryptedBalance extends Struct({
       .and(this.cipherText[1].equals(other.cipherText[1]));
   }
 
-  static empty() {
-    return new EncryptedBalance({
-      publicKey: Group.zero,
-      cipherText: [Field(0), Field(0)],
-    });
+  public decrypt(privateKey: PrivateKey): UInt64 {
+    const encryptedBalance = {
+      publicKey: this.publicKey,
+      cipherText: [...this.cipherText],
+    }; // this is required to deep-copy TODO remove later
+    return UInt64.fromFields(Encryption.decrypt(encryptedBalance, privateKey));
   }
 }
 
