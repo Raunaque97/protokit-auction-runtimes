@@ -6,7 +6,7 @@ import {
 } from "@proto-kit/module";
 
 import { State, StateMap, assert } from "@proto-kit/protocol";
-import { PublicKey, UInt64 } from "snarkyjs";
+import { PublicKey, UInt64 } from "o1js";
 
 @runtimeModule()
 export class Balances extends RuntimeModule<unknown> {

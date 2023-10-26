@@ -6,7 +6,7 @@ import {
 } from "@proto-kit/module";
 import { StateMap, State } from "@proto-kit/protocol";
 import assert from "assert";
-import { Bool, Field, PublicKey, Struct, UInt64 } from "snarkyjs";
+import { Bool, Field, PublicKey, Struct, UInt64 } from "o1js";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
 

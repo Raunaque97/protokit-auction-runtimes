@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { ModuleQuery, TestingAppChain } from "@proto-kit/sdk";
-import { Field, PrivateKey, PublicKey, UInt64 } from "snarkyjs";
+import { Field, PrivateKey, PublicKey, UInt64 } from "o1js";
 import { log } from "@proto-kit/common";
 import { ClaimKey, PrivateToken } from "./PrivateToken";
 import { PrivateMempool } from "@proto-kit/sequencer";

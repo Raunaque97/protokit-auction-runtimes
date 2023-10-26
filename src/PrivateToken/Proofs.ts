@@ -8,7 +8,7 @@ import {
   PublicKey,
   Struct,
   UInt64,
-} from "snarkyjs";
+} from "o1js";
 
 // publicKey acts like salt,
 // `Encryption.encrypt(..)` randomly generates the publicKey & is required during decryption

@@ -13,7 +13,7 @@ import {
   PublicKey,
   Struct,
   UInt64,
-} from "snarkyjs";
+} from "o1js";
 import {
   EncryptedBalance,
   MockClaimProof,

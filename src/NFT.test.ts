@@ -1,5 +1,5 @@
 import { TestingAppChain } from "@proto-kit/sdk";
-import { Poseidon, PrivateKey, UInt32, Encoding } from "snarkyjs";
+import { Poseidon, PrivateKey, UInt32, Encoding } from "o1js";
 import { NFTKey, NFT } from "./NFT";
 import { log } from "@proto-kit/common";
 

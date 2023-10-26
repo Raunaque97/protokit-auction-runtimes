@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { TestingAppChain } from "@proto-kit/sdk";
-import { Poseidon, PrivateKey, UInt32, Encoding, UInt64 } from "snarkyjs";
+import { Poseidon, PrivateKey, UInt32, Encoding, UInt64 } from "o1js";
 import { NFTKey, NFT } from "../NFT";
 import { EnglishAuction } from "./EnglishAuction";
 import { log } from "@proto-kit/common";

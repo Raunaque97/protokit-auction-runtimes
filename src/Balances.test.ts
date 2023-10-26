@@ -1,5 +1,5 @@
 import { TestingAppChain } from "@proto-kit/sdk";
-import { PrivateKey, UInt64 } from "snarkyjs";
+import { PrivateKey, UInt64 } from "o1js";
 import { Balances } from "./Balances";
 import { log } from "@proto-kit/common";
 
