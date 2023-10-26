@@ -1,6 +1,6 @@
 import "reflect-metadata";
-import { TestingAppChain } from "@proto-kit/sdk";
-import { Field, PrivateKey, UInt64 } from "snarkyjs";
+import { ModuleQuery, TestingAppChain } from "@proto-kit/sdk";
+import { Field, PrivateKey, PublicKey, UInt64 } from "snarkyjs";
 import { log } from "@proto-kit/common";
 import { ClaimKey, PrivateToken } from "./PrivateToken";
 import { PrivateMempool } from "@proto-kit/sequencer";
@@ -11,32 +11,51 @@ import {
   MockDepositProof,
   MockTransferProof,
 } from "./Proofs";
+import { Balances } from "../Balances";
 
 log.setLevel("ERROR");
 
 describe("Private Token", () => {
-  it("should demonstrate how deposit, transfer, claim works", async () => {
-    const appChain = TestingAppChain.fromRuntime({
+  let appChain: TestingAppChain<{
+    PrivateToken: typeof PrivateToken;
+    Balances: typeof Balances;
+  }>;
+  let alicePrivateKey: PrivateKey;
+  let alice: PublicKey;
+  let bobPrivateKey: PrivateKey;
+  let bob: PublicKey;
+  let privateToken: PrivateToken;
+  let privateTokenQuery: ModuleQuery<PrivateToken>;
+  let balances: Balances;
+  let balanceQuery: ModuleQuery<Balances>;
+
+  beforeEach(async () => {
+    appChain = TestingAppChain.fromRuntime({
       modules: {
         PrivateToken,
+        Balances,
       },
       config: {
         PrivateToken: {},
+        Balances: {},
       },
     });
     await appChain.start();
 
-    appChain.sequencer.resolveOrFail("Mempool", PrivateMempool).getTxs();
+    alicePrivateKey = PrivateKey.random();
+    alice = alicePrivateKey.toPublicKey();
+    bobPrivateKey = PrivateKey.random();
+    bob = bobPrivateKey.toPublicKey();
 
-    const alicePrivateKey = PrivateKey.random();
-    const alice = alicePrivateKey.toPublicKey();
-    const bobPrivateKey = PrivateKey.random();
-    const bob = bobPrivateKey.toPublicKey();
+    privateToken = appChain.runtime.resolve("PrivateToken");
+    privateTokenQuery = appChain.query.runtime.PrivateToken;
+    balances = appChain.runtime.resolve("Balances");
+    balanceQuery = appChain.query.runtime.Balances;
+  });
 
-    const privateToken = appChain.runtime.resolve("PrivateToken");
-    const queryModule = appChain.query.runtime.PrivateToken;
-
+  it("should demonstrate how deposit, transfer, claim works", async () => {
     // Alice deposits 100
+    // TODO: test deposit()
     appChain.setSigner(alicePrivateKey);
     const depositProof = new MockDepositProof({
       publicOutput: {
@@ -53,7 +72,7 @@ describe("Private Token", () => {
     await tx.send();
     await appChain.produceBlock();
 
-    let aliceClaimBalance = (await queryModule.claims.get(
+    let aliceClaimBalance = (await privateTokenQuery.claims.get(
       ClaimKey.from(alice, UInt64.from(0))
     )) as EncryptedBalance;
 
@@ -78,7 +97,7 @@ describe("Private Token", () => {
     await tx.send();
     await appChain.produceBlock();
 
-    let aliceBalance = (await queryModule.ledger.get(
+    let aliceBalance = (await privateTokenQuery.ledger.get(
       alice
     )) as EncryptedBalance;
     console.log(
@@ -104,9 +123,11 @@ describe("Private Token", () => {
     await tx.send();
     await appChain.produceBlock();
 
-    aliceBalance = (await queryModule.ledger.get(alice)) as EncryptedBalance;
+    aliceBalance = (await privateTokenQuery.ledger.get(
+      alice
+    )) as EncryptedBalance;
 
-    let bobClaimBalance = (await queryModule.claims.get(
+    let bobClaimBalance = (await privateTokenQuery.claims.get(
       ClaimKey.from(bob, UInt64.from(0))
     )) as EncryptedBalance;
     console.log(
@@ -122,10 +143,10 @@ describe("Private Token", () => {
     });
     await tx.sign();
     await tx.send();
-    aliceClaimBalance = (await queryModule.claims.get(
+    aliceClaimBalance = (await privateTokenQuery.claims.get(
       ClaimKey.from(alice, UInt64.from(0))
     )) as EncryptedBalance;
-    console.log("should be 0: ", aliceClaimBalance.cipherText[0].toBigInt());
+    // console.log("should be 0: ", aliceClaimBalance.cipherText[0].toBigInt());
 
     tx = appChain.transaction(alice, () => {
       privateToken.addClaim(ClaimKey.from(alice, UInt64.from(0)), claimProof);
@@ -134,7 +155,9 @@ describe("Private Token", () => {
     await tx.send();
     await appChain.produceBlock();
 
-    aliceBalance = (await queryModule.ledger.get(alice)) as EncryptedBalance;
+    aliceBalance = (await privateTokenQuery.ledger.get(
+      alice
+    )) as EncryptedBalance;
     console.log(
       "aliceBalance",
       aliceBalance.decrypt(alicePrivateKey).toBigInt()

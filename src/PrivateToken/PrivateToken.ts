@@ -4,14 +4,24 @@ import {
   runtimeModule,
   state,
 } from "@proto-kit/module";
-import { assert, StateMap } from "@proto-kit/protocol";
-import { Provable, PublicKey, Struct, UInt64 } from "snarkyjs";
+import { assert, State, StateMap } from "@proto-kit/protocol";
+import {
+  Bool,
+  Field,
+  Poseidon,
+  Provable,
+  PublicKey,
+  Struct,
+  UInt64,
+} from "snarkyjs";
 import {
   EncryptedBalance,
   MockClaimProof,
   MockDepositProof,
   MockTransferProof,
 } from "./Proofs";
+import { inject } from "tsyringe";
+import { Balances } from "../Balances";
 
 export class ClaimKey extends Struct({
   recipient: PublicKey,
@@ -25,6 +35,12 @@ export class ClaimKey extends Struct({
 // TODO: replace mockProofs later
 @runtimeModule()
 export class PrivateToken extends RuntimeModule<unknown> {
+  public readonly DEPOSIT_ADDRESS = PublicKey.from({
+    // TODO is this good?
+    x: Poseidon.hash([Field(42)]),
+    isOdd: Bool(false),
+  });
+
   @state() public ledger = StateMap.from<PublicKey, EncryptedBalance>(
     PublicKey,
     EncryptedBalance
@@ -36,6 +52,16 @@ export class PrivateToken extends RuntimeModule<unknown> {
   );
   // a counter per user for each new claim
   @state() public nounces = StateMap.from<PublicKey, UInt64>(PublicKey, UInt64);
+
+  @state() public deposits = StateMap.from<UInt64, Field>(UInt64, Field);
+  @state() public depositNounce = State.from(UInt64);
+
+  @state() public nullifiers = StateMap.from<Field, Field>(Field, Field);
+
+  public constructor(@inject("Balances") public balance: Balances) {
+    super();
+    // this.depositNounce.set(Field(0));
+  }
 
   @runtimeMethod()
   public transfer(transferProof: MockTransferProof) {
@@ -145,9 +171,38 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * TODO
    */
   @runtimeMethod()
+  public deposit(amount: UInt64, depositHash: Field) {
+    const nounce = this.depositNounce.get();
+    this.deposits.set(nounce.value, depositHash);
+    // update depositNounce
+    this.depositNounce.set(nounce.value.add(Field(1)));
+    // transfer amount to DEPOSIT_ADDRESS
+    this.balance.transferFrom(
+      this.transaction.sender,
+      this.DEPOSIT_ADDRESS,
+      amount
+    );
+  }
+
+  /**
+   * converts deposited token to private token
+   * TODO
+   */
+  @runtimeMethod()
   public addDeposit(depositProof: MockDepositProof) {
-    const proofOutput = depositProof.publicOutput;
     depositProof.verify();
+    const proofOutput = depositProof.publicOutput;
+
+    // check nullifier does not already exist
+    assert(
+      this.nullifiers.get(proofOutput.nullifierHash).isSome.not(),
+      "Nullifier already used"
+    );
+
+    // TODO verifies storage proof
+    // proofOutput.path == this.deposits.path
+    // proofOutput.rootHash exists in historical hashes
+
     const to = proofOutput.to;
     const claimKey = ClaimKey.from(to, this.nounces.get(to).value);
     // update nounce

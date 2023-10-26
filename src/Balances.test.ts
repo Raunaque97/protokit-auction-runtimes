@@ -7,16 +7,12 @@ log.setLevel("ERROR");
 
 describe("Balances", () => {
   it("should demonstrate how balances work", async () => {
-    const totalSupply = UInt64.from(10_000);
-
     const appChain = TestingAppChain.fromRuntime({
       modules: {
         Balances,
       },
       config: {
-        Balances: {
-          totalSupply,
-        },
+        Balances: {},
       },
     });
 
