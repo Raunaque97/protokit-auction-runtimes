@@ -16,9 +16,9 @@ import {
 } from "o1js";
 import {
   EncryptedBalance,
-  MockClaimProof,
-  MockDepositProof,
-  MockTransferProof,
+  ClaimProof,
+  DepositProof,
+  TransferProof,
 } from "./Proofs";
 import { inject } from "tsyringe";
 import { Balances } from "../Balances";
@@ -64,7 +64,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
   }
 
   @runtimeMethod()
-  public transfer(transferProof: MockTransferProof) {
+  public transfer(transferProof: TransferProof) {
     const transferProofOutput = transferProof.publicOutput;
     transferProof.verify();
     /**
@@ -100,7 +100,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
   }
 
   @runtimeMethod()
-  public addClaim(claimKey: ClaimKey, claimProof: MockClaimProof) {
+  public addClaim(claimKey: ClaimKey, claimProof: ClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     // claimProof shows they can decrypt the claim
@@ -138,7 +138,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * @param claimProof
    */
   @runtimeMethod()
-  public addFirstClaim(claimKey: ClaimKey, claimProof: MockClaimProof) {
+  public addFirstClaim(claimKey: ClaimKey, claimProof: ClaimProof) {
     claimProof.verify();
     const claimProofOutput = claimProof.publicOutput;
     // only intended receipent can add
@@ -168,7 +168,6 @@ export class PrivateToken extends RuntimeModule<unknown> {
   }
   /**
    * deposit normal token to get private Token
-   * TODO
    */
   @runtimeMethod()
   public deposit(amount: UInt64, depositHash: Field) {
@@ -189,7 +188,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * TODO
    */
   @runtimeMethod()
-  public addDeposit(depositProof: MockDepositProof) {
+  public addDeposit(depositProof: DepositProof) {
     depositProof.verify();
     const proofOutput = depositProof.publicOutput;
 
