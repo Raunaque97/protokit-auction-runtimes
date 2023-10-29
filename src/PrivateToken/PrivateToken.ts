@@ -19,6 +19,7 @@ import {
   ClaimProof,
   DepositProof,
   TransferProof,
+  DepositHashProof,
 } from "./Proofs";
 import { inject } from "tsyringe";
 import { Balances } from "../Balances";
@@ -170,9 +171,10 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * deposit normal token to get private Token
    */
   @runtimeMethod()
-  public deposit(amount: UInt64, depositHash: Field) {
+  public deposit(amount: UInt64, depositHashProof: DepositHashProof) {
     const nounce = this.depositNounce.get();
-    this.deposits.set(nounce.value, depositHash);
+    depositHashProof.verify();
+    this.deposits.set(nounce.value, depositHashProof.publicOutput);
     // update depositNounce
     this.depositNounce.set(nounce.value.add(Field(1)));
     // transfer amount to DEPOSIT_ADDRESS

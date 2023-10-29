@@ -65,10 +65,23 @@ describe("Private Token", () => {
     privateTokenQuery = appChain.query.runtime.PrivateToken;
     balances = appChain.runtime.resolve("Balances");
     balanceQuery = appChain.query.runtime.Balances;
+
+    // Alice mints 1000 tokens
+    appChain.setSigner(alicePrivateKey);
+    let tx = appChain.transaction(alice, () => {
+      balances.setBalance(alice, UInt64.from(1000));
+    });
+    await tx.sign();
+    await tx.send();
+    await appChain.produceBlock();
   });
 
   it("should demonstrate how deposit, transfer, claim works", async () => {
-    // TODO: test deposit()
+    // get alice balance
+    console.log(
+      "alice bal:",
+      (await balanceQuery.balances.get(alice))?.toBigInt()
+    );
 
     // Alice deposits 100
     const r = Field.random();

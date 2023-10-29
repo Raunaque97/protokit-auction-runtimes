@@ -170,3 +170,23 @@ export const depositProofProgram = Experimental.ZkProgram({
 export class DepositProof extends Experimental.ZkProgram.Proof(
   depositProofProgram
 ) {}
+
+/**
+ * Proves DepositHash is correctly computed
+ */
+// depositHash = H(amount, r); r is randomly choosen
+export function generateDepositHash(amount: UInt64, r: Field): Field {
+  return Poseidon.hash([...amount.toFields(), r]);
+}
+export const depositHashProgram = Experimental.ZkProgram({
+  publicOutput: Field,
+  methods: {
+    generate: {
+      privateInputs: [UInt64, Field],
+      method: generateDepositHash,
+    },
+  },
+});
+export class DepositHashProof extends Experimental.ZkProgram.Proof(
+  depositHashProgram
+) {}
