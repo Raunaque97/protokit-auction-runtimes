@@ -130,7 +130,7 @@ describe("Private Token", () => {
     await tx.send();
     await appChain.produceBlock();
     // alice add's the claim
-    tx = await addClaimTxn(alicePrivateKey, 1);
+    tx = await addClaimTxn(alicePrivateKey, 1, false);
     await tx.sign();
     await tx.send();
     await appChain.produceBlock();
