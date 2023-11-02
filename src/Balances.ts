@@ -6,7 +6,7 @@ import {
 } from "@proto-kit/module";
 
 import { State, StateMap, assert } from "@proto-kit/protocol";
-import { PublicKey, UInt64 } from "o1js";
+import { Provable, PublicKey, UInt64 } from "o1js";
 
 @runtimeModule()
 export class Balances extends RuntimeModule<unknown> {
@@ -36,9 +36,20 @@ export class Balances extends RuntimeModule<unknown> {
 
   public transferFrom(from: PublicKey, to: PublicKey, amount: UInt64) {
     const fromBalance = this.balances.get(from);
-    assert(fromBalance.value.greaterThanOrEqual(amount), "not enough balance");
     const toBalance = this.balances.get(to);
-    this.balances.set(from, fromBalance.value.sub(amount));
-    this.balances.set(to, toBalance.value.add(amount));
+
+    // assert(fromBalance.value.greaterThanOrEqual(amount), "not enough balance"); // is this required?
+    const fromBalancePadded = Provable.if(
+      fromBalance.value.greaterThanOrEqual(amount),
+      fromBalance.value,
+      fromBalance.value.add(amount)
+    );
+    const newToBalance = Provable.if(
+      fromBalance.value.greaterThanOrEqual(amount),
+      toBalance.value.add(amount),
+      toBalance.value
+    );
+    this.balances.set(from, fromBalancePadded.sub(amount));
+    this.balances.set(to, newToBalance);
   }
 }

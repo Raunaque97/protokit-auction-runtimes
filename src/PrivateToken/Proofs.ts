@@ -179,10 +179,11 @@ export function generateDepositHash(amount: UInt64, r: Field): Field {
   return Poseidon.hash([...amount.toFields(), r]);
 }
 export const depositHashProgram = Experimental.ZkProgram({
+  publicInput: UInt64,
   publicOutput: Field,
   methods: {
     generate: {
-      privateInputs: [UInt64, Field],
+      privateInputs: [Field],
       method: generateDepositHash,
     },
   },

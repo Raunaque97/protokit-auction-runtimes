@@ -22,6 +22,8 @@ import {
   ClaimProof,
   DepositProof,
   TransferProof,
+  DepositHashProof,
+  generateDepositHash,
 } from "./Proofs";
 import { Balances } from "../Balances";
 import { Pickles } from "o1js/dist/node/snarky";
@@ -66,8 +68,14 @@ describe("Private Token", () => {
     balances = appChain.runtime.resolve("Balances");
     balanceQuery = appChain.query.runtime.Balances;
 
+    console.log("Alice: ", alice.toBase58());
+    console.log("Bob:   ", bob.toBase58());
+
     // Alice mints 1000 tokens
     appChain.setSigner(alicePrivateKey);
+    const inMemorySigner = appChain.resolveOrFail("Signer", InMemorySigner);
+    inMemorySigner.config.signer = alicePrivateKey;
+
     let tx = appChain.transaction(alice, () => {
       balances.setBalance(alice, UInt64.from(1000));
     });
@@ -77,18 +85,34 @@ describe("Private Token", () => {
   });
 
   it("should demonstrate how deposit, transfer, claim works", async () => {
+    const r = Field.random(); // only alice knows
+
     // get alice balance
     console.log(
       "alice bal:",
       (await balanceQuery.balances.get(alice))?.toBigInt()
     );
+    appChain.setSigner(alicePrivateKey);
+    // alice deposits 100
+    const [, dummy] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
+    const depositHashProof = new DepositHashProof({
+      proof: dummy,
+      publicInput: UInt64.from(100),
+      publicOutput: generateDepositHash(UInt64.from(100), r),
+      maxProofsVerified: 2,
+    });
+    let tx = appChain.transaction(alice, () => {
+      privateToken.deposit(depositHashProof);
+    });
+    await tx.sign();
+    await tx.send();
+    await appChain.produceBlock();
 
-    // Alice deposits 100
-    const r = Field.random();
+    // Alice adds deposited amount to encrypted balance
     const dummyMerkelMap = new MerkleMap(); // TODO remove later when using appChain state
     const dummyWitness = dummyMerkelMap.getWitness(Field(0));
 
-    let tx = await addDepositTxn(
+    tx = await addDepositTxn(
       alicePrivateKey,
       UInt64.from(100),
       r,

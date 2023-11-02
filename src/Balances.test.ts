@@ -31,14 +31,24 @@ describe("Balances", () => {
 
     await tx1.sign();
     await tx1.send();
-
     const block1 = await appChain.produceBlock();
 
-    const aliceBalance = await appChain.query.runtime.Balances.balances.get(
+    let aliceBalance = await appChain.query.runtime.Balances.balances.get(
       alice
     );
 
     expect(block1?.txs[0].status).toBe(true);
     expect(aliceBalance?.toBigInt()).toBe(1000n);
+
+    // alice transfers 100 to someone
+    const tx2 = appChain.transaction(alice, () => {
+      balances.transfer(PrivateKey.random().toPublicKey(), UInt64.from(100));
+    });
+    await tx2.sign();
+    await tx2.send();
+    await appChain.produceBlock();
+
+    aliceBalance = await appChain.query.runtime.Balances.balances.get(alice);
+    expect(aliceBalance?.toBigInt()).toBe(900n);
   });
 });

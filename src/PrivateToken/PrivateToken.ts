@@ -171,7 +171,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
    * deposit normal token to get private Token
    */
   @runtimeMethod()
-  public deposit(amount: UInt64, depositHashProof: DepositHashProof) {
+  public deposit(depositHashProof: DepositHashProof) {
     const nounce = this.depositNounce.get();
     depositHashProof.verify();
     this.deposits.set(nounce.value, depositHashProof.publicOutput);
@@ -181,7 +181,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
     this.balance.transferFrom(
       this.transaction.sender,
       this.DEPOSIT_ADDRESS,
-      amount
+      depositHashProof.publicInput // amount
     );
   }
 
