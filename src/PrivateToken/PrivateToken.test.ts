@@ -88,10 +88,11 @@ describe("Private Token", () => {
     const r = Field.random(); // only alice knows
 
     // get alice balance
-    console.log(
-      "alice bal:",
-      (await balanceQuery.balances.get(alice))?.toBigInt()
-    );
+    // console.log(
+    //   "alice bal b4:",
+    //   (await balanceQuery.balances.get(alice))?.toBigInt()
+    // );
+
     appChain.setSigner(alicePrivateKey);
     // alice deposits 100
     const [, dummy] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
@@ -107,6 +108,12 @@ describe("Private Token", () => {
     await tx.sign();
     await tx.send();
     await appChain.produceBlock();
+
+    // console.log(
+    //   "alice bal after:",
+    //   (await balanceQuery.balances.get(alice))?.toBigInt()
+    // );
+    expect((await balanceQuery.balances.get(alice))?.toBigInt()).toBe(900n);
 
     // Alice adds deposited amount to encrypted balance
     const dummyMerkelMap = new MerkleMap(); // TODO remove later when using appChain state
