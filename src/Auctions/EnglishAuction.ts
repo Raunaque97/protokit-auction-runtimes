@@ -4,90 +4,122 @@ import {
   RuntimeModule,
   state,
 } from "@proto-kit/module";
-import { StateMap, State } from "@proto-kit/protocol";
+import { StateMap } from "@proto-kit/protocol";
 import assert from "assert";
-import { Bool, Field, Poseidon, PublicKey, Struct, UInt64 } from "o1js";
+import {
+  Bool,
+  Encoding,
+  Poseidon,
+  Provable,
+  PublicKey,
+  Struct,
+  UInt64,
+} from "o1js";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
 import { Balances } from "../Balances";
+import { AuctionModule, BaseAuctionData } from "./Auction";
 
 export class Bids extends Struct({
   bidder: PublicKey,
   price: UInt64,
 }) {}
 
-@runtimeModule()
-export class EnglishAuction extends RuntimeModule<unknown> {
-  @state() public askPrices = StateMap.from<NFTKey, UInt64>(NFTKey, UInt64);
-  @state() public maxBids = StateMap.from<NFTKey, Bids>(NFTKey, Bids);
+export class EnglishAuction extends Struct({
+  ...BaseAuctionData,
+  startTime: UInt64,
+  endTime: UInt64,
+  maxBid: Bids,
+}) {}
 
+@runtimeModule()
+export class EnglishAuctionModule extends AuctionModule<EnglishAuction> {
   public readonly ADDRESS = PublicKey.from({
-    x: Poseidon.hash([Field(1), Field(42)]),
+    x: Poseidon.hash(Encoding.stringToFields("EnglishAuction")),
     isOdd: Bool(false),
   });
+  @state() public auctionIds = StateMap.from<NFTKey, UInt64>(NFTKey, UInt64);
 
   public constructor(
     @inject("NFT") public nft: NFT,
     @inject("Balances") public balance: Balances
   ) {
-    super();
+    super(nft);
+    this.records = StateMap.from<UInt64, EnglishAuction>(
+      UInt64,
+      EnglishAuction
+    );
   }
 
   @runtimeMethod()
-  public listItem(nftKey: NFTKey, askPrice: UInt64) {
-    // check owner
-    this.nft.assertAddressOwner(nftKey, this.transaction.sender);
-    // assert not locked
-    this.nft.assertUnLocked(nftKey);
-
-    this.askPrices.set(nftKey, askPrice);
-    // lock nft
-    this.nft.lock(nftKey);
+  public start(nftKey: NFTKey, endTime: UInt64) {
+    const auction = new EnglishAuction({
+      nftKey,
+      creator: this.transaction.sender,
+      winner: PublicKey.empty(),
+      ended: Bool(false),
+      startTime: this.network.block.height,
+      endTime: endTime,
+      maxBid: new Bids({ bidder: this.transaction.sender, price: UInt64.zero }),
+    });
+    this.auctionIds.set(nftKey, this.createAuction(auction));
   }
 
   @runtimeMethod()
   public placeBid(nftKey: NFTKey, bid: UInt64) {
+    const auctionId = this.auctionIds.get(nftKey);
+    assert(auctionId.isSome, "no auctions exists");
+    const auction = this.records.get(auctionId.value).value;
     const currentBid = new Bids({
       bidder: this.transaction.sender,
       price: bid,
     });
-    const maxBid = this.maxBids.get(nftKey).value;
     assert(
-      currentBid.price.greaterThan(maxBid.price),
+      currentBid.price.greaterThan(auction.maxBid.price),
       "Bid must be higher than previous bid"
+    );
+    assert(
+      auction.endTime
+        .greaterThan(this.network.block.height)
+        .and(auction.ended.not()),
+      "Auction has ended"
     );
     // lock bidders amount
     this.balance.transferFrom(this.transaction.sender, this.ADDRESS, bid);
     // we return the earlier bidders locked amount
-    this.balance.transferFrom(this.ADDRESS, maxBid.bidder, maxBid.price);
-    // update maxBids
-    this.maxBids.set(nftKey, currentBid);
-  }
-
-  @runtimeMethod()
-  public acceptBid(nftKey: NFTKey) {
-    // only owner
-    this.nft.assertAddressOwner(nftKey, this.transaction.sender);
-    // assert bid exists
-    assert(this.maxBids.get(nftKey).isSome, "no bids exists");
-    const maxBid = this.maxBids.get(nftKey).value;
-    assert(maxBid.bidder.isEmpty().not(), "no bid exists/already accepted");
-
-    // transfer the locked token amount to seller
     this.balance.transferFrom(
       this.ADDRESS,
-      this.transaction.sender,
-      maxBid.price
+      auction.maxBid.bidder,
+      auction.maxBid.price
     );
+    // update maxBids
+    this.records.set(auctionId.value, { ...auction, maxBid: currentBid });
+  }
 
-    // transfer nft to max bidder
-    this.nft.transfer(maxBid.bidder, nftKey);
-    this.nft.unlock(nftKey);
-    // reset maxBid & askPrice TODO update to remove
-    this.maxBids.set(
-      nftKey,
-      new Bids({ bidder: PublicKey.empty(), price: UInt64.zero })
+  /**
+   * Anyone can call this after auction endTime
+   * maxBidder gets the nft and
+   * auction creator gets the bid
+   * @param nftKey
+   */
+  @runtimeMethod()
+  public end(nftKey: NFTKey) {
+    const auctionId = this.auctionIds.get(nftKey);
+    assert(auctionId.isSome, "no auctions exists");
+    const auction = this.records.get(auctionId.value).value;
+    assert(
+      auction.endTime
+        .lessThan(this.network.block.height)
+        .and(auction.ended.not()),
+      "Wait till auction ends"
     );
-    this.askPrices.set(nftKey, UInt64.zero);
+    // transfer the locked token amount to seller or auction creator
+    this.balance.transferFrom(
+      this.ADDRESS,
+      auction.creator,
+      auction.maxBid.price
+    );
+    // end auction
+    this.endAuction(auctionId.value, auction.maxBid.bidder);
   }
 }

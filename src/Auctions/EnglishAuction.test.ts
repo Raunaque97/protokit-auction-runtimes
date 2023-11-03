@@ -9,7 +9,7 @@ import {
   PublicKey,
 } from "o1js";
 import { NFTKey, NFT } from "../NFT";
-import { EnglishAuction } from "./EnglishAuction";
+import { EnglishAuction, EnglishAuctionModule } from "./EnglishAuction";
 import { log } from "@proto-kit/common";
 import { Balances } from "../Balances";
 
@@ -17,7 +17,7 @@ log.setLevel("ERROR");
 
 describe("EnglishAuction", () => {
   let appChain: TestingAppChain<{
-    EnglishAuction: typeof EnglishAuction;
+    EnglishAuctionModule: typeof EnglishAuctionModule;
     NFT: typeof NFT;
     Balances: typeof Balances;
   }>;
@@ -29,19 +29,19 @@ describe("EnglishAuction", () => {
   let balanceQuery: ModuleQuery<Balances>;
   let nfts: NFT;
   let nftQuery: ModuleQuery<NFT>;
-  let auction: EnglishAuction;
+  let auction: EnglishAuctionModule;
   let auctionQuery: ModuleQuery<EnglishAuction>;
   let inMemorySigner: InMemorySigner; //TODO remove later
 
   beforeEach(async () => {
     appChain = TestingAppChain.fromRuntime({
       modules: {
-        EnglishAuction,
+        EnglishAuctionModule,
         NFT,
         Balances,
       },
       config: {
-        EnglishAuction: {},
+        EnglishAuctionModule: {},
         NFT: {},
         Balances: {},
       },
@@ -59,8 +59,8 @@ describe("EnglishAuction", () => {
     balanceQuery = appChain.query.runtime.Balances;
     nfts = appChain.runtime.resolve("NFT");
     nftQuery = appChain.query.runtime.NFT;
-    auction = appChain.runtime.resolve("EnglishAuction");
-    auctionQuery = appChain.query.runtime.EnglishAuction;
+    auction = appChain.runtime.resolve("EnglishAuctionModule");
+    auctionQuery = appChain.query.runtime.EnglishAuctionModule;
 
     console.log("Alice: ", alice.toBase58());
     console.log("Bob:   ", bob.toBase58());
@@ -95,7 +95,8 @@ describe("EnglishAuction", () => {
     });
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    let block = await appChain.produceBlock();
+    expect(block?.txs[0].status).toBe(true);
 
     const nft0Key = NFTKey.from(minter, UInt32.from(0));
     let nft0 = await appChain.query.runtime.NFT.records.get(nft0Key);
@@ -104,11 +105,12 @@ describe("EnglishAuction", () => {
 
     // minter lists for auction
     tx = appChain.transaction(minter, () => {
-      auction.listItem(nft0Key, UInt64.from(1000));
+      auction.start(nft0Key, UInt64.from(4));
     });
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status).toBe(true);
 
     nft0 = await appChain.query.runtime.NFT.records.get(nft0Key);
     expect(nft0?.owner).toStrictEqual(minter); // minter should still be owner
@@ -122,22 +124,24 @@ describe("EnglishAuction", () => {
     });
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status).toBe(true);
 
     let aliceBalance = await balanceQuery.balances.get(alice);
     expect(aliceBalance?.toBigInt()).toBe(500n);
     let minterBalance = await balanceQuery.balances.get(minter);
-    expect(minterBalance?.toBigInt()).toBe(undefined);
+    expect(minterBalance?.toBigInt()).toBe(0n);
 
     // minter accepts bid
     inMemorySigner.config.signer = minterPrivateKey; // appChain.setSigner(minterPrivateKey);
 
     tx = appChain.transaction(minter, () => {
-      auction.acceptBid(nft0Key);
+      auction.end(nft0Key);
     });
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status).toBe(true);
 
     minterBalance = await balanceQuery.balances.get(minter);
     expect(minterBalance?.toBigInt()).toBe(500n);

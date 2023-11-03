@@ -7,6 +7,7 @@ import {
 import { assert, State, StateMap } from "@proto-kit/protocol";
 import {
   Bool,
+  Encoding,
   Field,
   Poseidon,
   Provable,
@@ -37,8 +38,7 @@ export class ClaimKey extends Struct({
 @runtimeModule()
 export class PrivateToken extends RuntimeModule<unknown> {
   public readonly DEPOSIT_ADDRESS = PublicKey.from({
-    // TODO is this good?
-    x: Poseidon.hash([Field(42)]),
+    x: Poseidon.hash(Encoding.stringToFields("PrivateToken")),
     isOdd: Bool(false),
   });
 
