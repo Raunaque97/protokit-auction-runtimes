@@ -42,6 +42,7 @@ export class NFT extends RuntimeModule<{}> {
 
   @runtimeMethod()
   public transferSigned(to: PublicKey, nftKey: NFTKey) {
+    assert(this.records.get(nftKey).isSome, "nft does not exists");
     const nft = this.records.get(nftKey).value;
     // check if sender is the current owner
     assert(nft.owner.equals(this.transaction.sender), "Not owner of NFT");
@@ -85,6 +86,11 @@ export class NFT extends RuntimeModule<{}> {
 
   public assertAddressOwner(key: NFTKey, address: PublicKey) {
     const nft = this.records.get(key).value;
+    console.log(
+      "is owner",
+      address.toBase58().substring(0, 8),
+      nft.owner.equals(address).toBoolean()
+    );
     assert(nft.owner.equals(address), "Not owner of NFT");
   }
 }

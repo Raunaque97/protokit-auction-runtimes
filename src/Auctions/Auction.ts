@@ -33,7 +33,10 @@ export abstract class AuctionModule<
     this.counter.set(this.counter.get().value.add(1));
 
     const nftKey = auction.nftKey;
-    console.log("n", this.nft.records.get(nftKey).isSome.toBoolean());
+    console.log(
+      "nftkey exists?: ",
+      this.nft.records.get(nftKey).isSome.toBoolean()
+    );
     assert(this.nft.records.get(nftKey).isSome, "nft does not exists");
     this.nft.assertAddressOwner(nftKey, this.transaction.sender);
     // check if the nft is unlocked

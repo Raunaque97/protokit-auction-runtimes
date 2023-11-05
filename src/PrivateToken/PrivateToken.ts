@@ -149,7 +149,6 @@ export class PrivateToken extends RuntimeModule<unknown> {
       this.ledger.get(claimProofOutput.owner).isSome.not(),
       "Not first time"
     );
-    Provable.log();
     /**
      * Update the encrypted balance in the ledger directly
      * with claim amount as account starts with Zero
@@ -210,5 +209,18 @@ export class PrivateToken extends RuntimeModule<unknown> {
     this.nounces.set(to, this.nounces.get(to).value.add(1));
     // store the claim so it can be claimed later
     this.claims.set(claimKey, proofOutput.amount);
+  }
+  @runtimeMethod()
+  public withdraw() {
+    //TODO
+    throw new Error("Method not implemented.");
+  }
+  /**
+   * to process withdrawals or to return locked funds by other runtimes
+   * @param address
+   * @param amount
+   */
+  public unlockBalance(address: PublicKey, amount: UInt64) {
+    this.balance.transferFrom(this.DEPOSIT_ADDRESS, address, amount);
   }
 }

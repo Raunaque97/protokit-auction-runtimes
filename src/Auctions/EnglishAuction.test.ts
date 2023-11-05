@@ -150,4 +150,43 @@ describe("EnglishAuction", () => {
     expect(nft0?.owner).toStrictEqual(alice); // alice is the new owner
     expect(nft0?.locked.toBoolean()).toStrictEqual(false); // nft should be unlocked
   });
+
+  // it("should fail if not owner", async () => {
+  //   // minter mints 1 nfts and sets up a auction
+  //   const nftMetadata = Poseidon.hash(
+  //     Encoding.stringToFields(
+  //       JSON.stringify({
+  //         name: "testNFT",
+  //         uri: "...",
+  //       })
+  //     )
+  //   );
+  //   const minterPrivateKey = PrivateKey.random();
+  //   const minter = minterPrivateKey.toPublicKey();
+  //   inMemorySigner.config.signer = minterPrivateKey; // appChain.setSigner(minterPrivateKey);
+
+  //   let tx = appChain.transaction(minter, () => {
+  //     nfts.mint(minter, nftMetadata); // mints to himself
+  //   });
+  //   await tx.sign();
+  //   await tx.send();
+  //   let block = await appChain.produceBlock();
+  //   expect(block?.txs[0].status).toBe(true);
+
+  //   const nft0Key = NFTKey.from(minter, UInt32.from(0));
+  //   let nft0 = await appChain.query.runtime.NFT.records.get(nft0Key);
+
+  //   // alice tries to list it for auction
+  //   inMemorySigner.config.signer = alicePrivateKey; // appChain.setSigner(alicePrivateKey);
+
+  //   tx = appChain.transaction(alice, () => {
+  //     auction.start(nft0Key, UInt64.from(4));
+  //   });
+  //   await tx.sign();
+  //   await tx.send();
+  //   block = await appChain.produceBlock();
+  //   console.log("status", block?.txs[0].status);
+  //   expect(block?.txs[0].status).toBe(false);
+  //   expect(block?.txs[0].statusMessage).toBe("Not owner of NFT");
+  // });
 });
