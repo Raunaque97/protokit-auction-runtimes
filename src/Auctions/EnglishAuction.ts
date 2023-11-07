@@ -37,15 +37,20 @@ export class EnglishAuctionModule extends AuctionModule<EnglishAuction> {
     );
   }
 
+  /**
+   * @param nftKey
+   * @param duration `placeBid` possible in the next `duration` blocks
+   */
   @runtimeMethod()
-  public start(nftKey: NFTKey, endTime: UInt64) {
+  public start(nftKey: NFTKey, duration: UInt64) {
+    // TODO is duration > buffer required
     const auction = new EnglishAuction({
       nftKey,
       creator: this.transaction.sender,
       winner: PublicKey.empty(),
       ended: Bool(false),
       startTime: this.network.block.height,
-      endTime: endTime,
+      endTime: this.network.block.height.add(duration),
       maxBid: new Bids({ bidder: this.transaction.sender, price: UInt64.zero }),
     });
     this.auctionIds.set(nftKey, this.createAuction(auction));
