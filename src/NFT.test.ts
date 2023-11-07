@@ -43,7 +43,8 @@ describe("NFT", () => {
     });
     await tx1.sign();
     await tx1.send();
-    await appChain.produceBlock();
+    let block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     const tx2 = appChain.transaction(minter, () => {
       nft.mint(alice, nftMetadata); // mints to Alice
@@ -61,8 +62,8 @@ describe("NFT", () => {
     await tx3.sign();
     await tx3.send();
 
-    const block1 = await appChain.produceBlock();
-    expect(block1?.txs[0].status).toBe(true);
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     const nft1key = NFTKey.from(minter, UInt32.from(0));
     const nft2key = NFTKey.from(minter, UInt32.from(1));

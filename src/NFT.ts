@@ -4,8 +4,7 @@ import {
   RuntimeModule,
   state,
 } from "@proto-kit/module";
-import { StateMap } from "@proto-kit/protocol";
-import assert from "assert";
+import { StateMap, assert } from "@proto-kit/protocol";
 import { Bool, Field, PublicKey, Struct, UInt32 } from "o1js";
 
 export class NFTKey extends Struct({
@@ -86,11 +85,11 @@ export class NFT extends RuntimeModule<{}> {
 
   public assertAddressOwner(key: NFTKey, address: PublicKey) {
     const nft = this.records.get(key).value;
-    console.log(
-      "is owner",
-      address.toBase58().substring(0, 8),
-      nft.owner.equals(address).toBoolean()
-    );
+    // console.log(
+    //   "is owner",
+    //   address.toBase58().substring(0, 8),
+    //   nft.owner.equals(address).toBoolean()
+    // );
     assert(nft.owner.equals(address), "Not owner of NFT");
   }
 }

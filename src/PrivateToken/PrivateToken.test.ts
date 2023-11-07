@@ -87,12 +87,6 @@ describe("Private Token", () => {
   it("should demonstrate how deposit, transfer, claim works", async () => {
     const r = Field.random(); // only alice knows
 
-    // get alice balance
-    // console.log(
-    //   "alice bal b4:",
-    //   (await balanceQuery.balances.get(alice))?.toBigInt()
-    // );
-
     appChain.setSigner(alicePrivateKey);
     // alice deposits 100
     const [, dummy] = Pickles.proofOfBase64(await dummyBase64Proof(), 2);
@@ -107,7 +101,8 @@ describe("Private Token", () => {
     });
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    let block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     // console.log(
     //   "alice bal after:",
@@ -127,7 +122,8 @@ describe("Private Token", () => {
     );
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     let aliceClaimBalance = (await privateTokenQuery.claims.get(
       ClaimKey.from(alice, UInt64.from(0))
@@ -138,7 +134,8 @@ describe("Private Token", () => {
     tx = await addClaimTxn(alicePrivateKey, 0, true);
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     let aliceBalance = (await privateTokenQuery.ledger.get(
       alice
@@ -153,7 +150,8 @@ describe("Private Token", () => {
     tx = await transferFromTxn(alicePrivateKey, bob, UInt64.from(10));
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     aliceBalance = (await privateTokenQuery.ledger.get(
       alice
@@ -172,12 +170,14 @@ describe("Private Token", () => {
     tx = await addDepositTxn(alicePrivateKey, UInt64.from(50), r, dummyWitness);
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
-    // alice add's the claim
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
+    // alice add's ttrueaim
     tx = await addClaimTxn(alicePrivateKey, 1, false);
     await tx.sign();
     await tx.send();
-    await appChain.produceBlock();
+    block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     aliceBalance = (await privateTokenQuery.ledger.get(
       alice

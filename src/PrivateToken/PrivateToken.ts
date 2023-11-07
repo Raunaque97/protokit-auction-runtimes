@@ -210,6 +210,7 @@ export class PrivateToken extends RuntimeModule<unknown> {
     // store the claim so it can be claimed later
     this.claims.set(claimKey, proofOutput.amount);
   }
+
   @runtimeMethod()
   public withdraw() {
     //TODO

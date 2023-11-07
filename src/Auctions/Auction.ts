@@ -1,9 +1,8 @@
 import { runtimeModule, RuntimeModule, state } from "@proto-kit/module";
-import assert from "assert";
 import { Bool, PublicKey, Struct, UInt64 } from "o1js";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
-import { StateMap, State } from "@proto-kit/protocol";
+import { StateMap, State, assert } from "@proto-kit/protocol";
 
 export const BaseAuctionData = {
   nftKey: NFTKey,
@@ -33,10 +32,10 @@ export abstract class AuctionModule<
     this.counter.set(this.counter.get().value.add(1));
 
     const nftKey = auction.nftKey;
-    console.log(
-      "nftkey exists?: ",
-      this.nft.records.get(nftKey).isSome.toBoolean()
-    );
+    // console.log(
+    //   "nftkey exists?: ",
+    //   this.nft.records.get(nftKey).isSome.toBoolean()
+    // );
     assert(this.nft.records.get(nftKey).isSome, "nft does not exists");
     this.nft.assertAddressOwner(nftKey, this.transaction.sender);
     // check if the nft is unlocked

@@ -1,20 +1,6 @@
-import {
-  runtimeMethod,
-  runtimeModule,
-  RuntimeModule,
-  state,
-} from "@proto-kit/module";
-import { StateMap } from "@proto-kit/protocol";
-import assert from "assert";
-import {
-  Bool,
-  Encoding,
-  Poseidon,
-  Provable,
-  PublicKey,
-  Struct,
-  UInt64,
-} from "o1js";
+import { runtimeMethod, runtimeModule, state } from "@proto-kit/module";
+import { StateMap, assert } from "@proto-kit/protocol";
+import { Bool, Encoding, Poseidon, PublicKey, Struct, UInt64 } from "o1js";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
 import { Balances } from "../Balances";
@@ -80,7 +66,7 @@ export class EnglishAuctionModule extends AuctionModule<EnglishAuction> {
     );
     assert(
       auction.endTime
-        .greaterThan(this.network.block.height)
+        .greaterThanOrEqual(this.network.block.height)
         .and(auction.ended.not()),
       "Auction has ended"
     );

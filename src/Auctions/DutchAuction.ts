@@ -4,11 +4,10 @@ import {
   RuntimeModule,
   state,
 } from "@proto-kit/module";
-import assert from "assert";
 import { Bool, Provable, PublicKey, Struct, UInt64 } from "o1js";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
-import { StateMap } from "@proto-kit/protocol";
+import { StateMap, assert } from "@proto-kit/protocol";
 import { Auction, AuctionModule, BaseAuctionData } from "./Auction";
 
 export class DutchAuction extends Struct({

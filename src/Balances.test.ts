@@ -46,7 +46,8 @@ describe("Balances", () => {
     });
     await tx2.sign();
     await tx2.send();
-    await appChain.produceBlock();
+    let block = await appChain.produceBlock();
+    expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
     aliceBalance = await appChain.query.runtime.Balances.balances.get(alice);
     expect(aliceBalance?.toBigInt()).toBe(900n);
