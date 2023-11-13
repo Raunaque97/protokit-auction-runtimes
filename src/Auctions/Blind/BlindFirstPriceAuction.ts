@@ -11,9 +11,10 @@ import {
   UInt64,
 } from "o1js";
 import { inject } from "tsyringe";
-import { NFT, NFTKey } from "../NFT";
-import { AuctionModule, BaseAuctionData } from "./Auction";
-import { PrivateToken } from "../PrivateToken/PrivateToken";
+import { NFT, NFTKey } from "../../NFT";
+import { AuctionModule, BaseAuctionData } from "../Auction";
+import { PrivateToken } from "../../PrivateToken/PrivateToken";
+import { RevealBidProof, SealedBidProof } from "./Proofs";
 
 export class Bids extends Struct({
   bidder: PublicKey,
@@ -35,7 +36,7 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
     isOdd: Bool(false),
   });
   @state() public auctionIds = StateMap.from<NFTKey, UInt64>(NFTKey, UInt64);
-  @state() public bidHashs = StateMap.from<Field, Bool>(Field, Bool);
+  @state() public bidHashes = StateMap.from<Field, Bool>(Field, Bool);
 
   public constructor(
     @inject("NFT") public nft: NFT,
@@ -51,19 +52,18 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
   @runtimeMethod()
   public start(
     nftKey: NFTKey,
-    endTime: UInt64,
-    revealTime: UInt64,
+    biddingWindow: UInt64,
+    revealWindow: UInt64,
     minPrice: UInt64
   ) {
-    assert(revealTime.lessThan(endTime), "check timings");
     const auction = new BlindFirstPriceAuction({
       nftKey,
       creator: this.transaction.sender,
       winner: PublicKey.empty(),
       ended: Bool(false),
       startTime: this.network.block.height,
-      revealTime: revealTime,
-      endTime: endTime,
+      revealTime: this.network.block.height.add(biddingWindow),
+      endTime: this.network.block.height.add(biddingWindow).add(revealWindow),
       maxBid: new Bids({ bidder: this.transaction.sender, price: minPrice }),
     });
     this.auctionIds.set(nftKey, this.createAuction(auction));
@@ -71,23 +71,41 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
 
   /**
    * place bid before reveal Time.
+   * bidHash = H(auctionId, value, salt)
    * @param nftKey
    * @param bidHashProof
    */
   @runtimeMethod()
-  public placeSealedBid(nftKey: NFTKey, bidHashProof: Field) {
+  public placeSealedBid(nftKey: NFTKey, sealedBidProof: SealedBidProof) {
     const auctionId = this.auctionIds.get(nftKey);
     assert(auctionId.isSome, "no auctions exists");
-    assert(this.bidHashs.get(bidHashProof).isSome.not(), "bid Hash used");
     const auction = this.records.get(auctionId.value).value;
     assert(
       auction.revealTime.greaterThanOrEqual(this.network.block.height),
       "bidding ended"
     );
-    // TODO Prove funds are locked
-    // this.privateToken.claims()
+    sealedBidProof.verify();
+    const sealedBidProofOutput = sealedBidProof.publicOutput;
+    const currentBalance = this.privateToken.ledger.get(
+      sealedBidProofOutput.owner
+    ).value;
+    assert(
+      sealedBidProofOutput.currentBalance.equals(currentBalance),
+      "Proven encrypted balance does not match current known encrypted balance"
+    );
+    assert(sealedBidProofOutput.to.equals(this.ADDRESS), "wrong Auction");
+    assert(
+      this.bidHashes.get(sealedBidProofOutput.bidHash).isSome.not(),
+      "bidHash already used"
+    );
 
-    this.bidHashs.set(bidHashProof, Bool(true));
+    //Update the encrypted balance
+    this.privateToken.ledger.set(
+      sealedBidProofOutput.owner,
+      sealedBidProofOutput.resultingBalance
+    );
+    // update bidHashes
+    this.bidHashes.set(sealedBidProofOutput.bidHash, Bool(true));
   }
 
   /**
@@ -97,10 +115,11 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
    * @param nftKey
    */
   @runtimeMethod()
-  public revealBid(nftKey: NFTKey, revealBidProof: Field, revealBid: UInt64) {
-    const auctionId = this.auctionIds.get(nftKey);
-    assert(auctionId.isSome, "no auctions exists");
-    const auction = this.records.get(auctionId.value).value;
+  public revealBid(revealBidProof: RevealBidProof) {
+    revealBidProof.verify();
+    const revealedBid = revealBidProof.publicOutput;
+    const auctionId = revealedBid.auctionId;
+    const auction = this.records.get(auctionId).value;
     assert(
       auction.revealTime
         .lessThan(this.network.block.height)
@@ -112,32 +131,32 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
     // return locked funds to prev maxBidder if we have a new maxBidder
     // else to the transaction sender
     const refund = Provable.if(
-      revealBid.greaterThan(auction.maxBid.price),
+      revealedBid.amount.greaterThan(auction.maxBid.price),
       auction.maxBid.price,
-      revealBid
+      revealedBid.amount
     );
     const refundee = Provable.if(
-      revealBid.greaterThan(auction.maxBid.price),
+      revealedBid.amount.greaterThan(auction.maxBid.price),
       auction.maxBid.bidder,
-      this.transaction.sender
+      revealedBid.bidder
     );
     this.privateToken.unlockBalance(refundee, refund);
 
-    // if(revealBid > maxBid) update maxbid
+    // if(revealedBid.amount > maxBid) update maxBid
     auction.maxBid.bidder = Provable.if(
-      revealBid.greaterThan(auction.maxBid.price),
-      this.transaction.sender,
+      revealedBid.amount.greaterThan(auction.maxBid.price),
+      revealedBid.bidder,
       auction.maxBid.bidder
     );
     auction.maxBid.price = Provable.if(
-      revealBid.greaterThan(auction.maxBid.price),
-      revealBid,
+      revealedBid.amount.greaterThan(auction.maxBid.price),
+      revealedBid.amount,
       auction.maxBid.price
     );
   }
 
   /**
-   * ends the auction
+   * ends the auction, called after `endTime`
    * max Bidder gets the nft and
    * auction creator gets the max bid amount
    * @param nftKey
