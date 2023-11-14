@@ -38,7 +38,7 @@ describe("NFT", () => {
       )
     );
     appChain.setSigner(minterPrivateKey);
-    const tx1 = appChain.transaction(minter, () => {
+    const tx1 = await appChain.transaction(minter, () => {
       nft.mint(minter, nftMetadata); // mints to himself
     });
     await tx1.sign();
@@ -46,7 +46,7 @@ describe("NFT", () => {
     let block = await appChain.produceBlock();
     expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
 
-    const tx2 = appChain.transaction(minter, () => {
+    const tx2 = await appChain.transaction(minter, () => {
       nft.mint(alice, nftMetadata); // mints to Alice
     });
     await tx2.sign();
@@ -54,7 +54,7 @@ describe("NFT", () => {
     await appChain.produceBlock();
 
     // minter transfers nft1 to bob
-    const tx3 = appChain.transaction(minter, () => {
+    const tx3 = await appChain.transaction(minter, () => {
       // nft.transfer(bob, NFTKey.from(minter, UInt32.from(0))); // has no effect
       nft.transferSigned(bob, NFTKey.from(minter, UInt32.from(0)));
       // nft.mint(bob, nftMetadata);

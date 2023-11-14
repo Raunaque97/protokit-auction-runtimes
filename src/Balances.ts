@@ -38,7 +38,7 @@ export class Balances extends RuntimeModule<unknown> {
     const fromBalance = this.balances.get(from);
     const toBalance = this.balances.get(to);
 
-    // assert(fromBalance.value.greaterThanOrEqual(amount), "not enough balance"); // is this required?
+    assert(fromBalance.value.greaterThanOrEqual(amount), "not enough balance"); // is this required?
     const fromBalancePadded = Provable.if(
       fromBalance.value.greaterThanOrEqual(amount),
       fromBalance.value,

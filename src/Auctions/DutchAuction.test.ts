@@ -40,7 +40,7 @@ describe("DutchAuctions", () => {
       )
     );
     appChain.setSigner(minterPrivateKey);
-    let tx = appChain.transaction(minter, () => {
+    let tx = await appChain.transaction(minter, () => {
       nft.mint(minter, nftMetadata); // mints to himself
     });
     await tx.sign();
@@ -52,7 +52,7 @@ describe("DutchAuctions", () => {
     expect(nft0?.owner).toStrictEqual(minter); // minter is still owner
     expect(nft0?.locked.toBoolean()).toStrictEqual(false); // nft should be locked
 
-    tx = appChain.transaction(minter, () => {
+    tx = await appChain.transaction(minter, () => {
       auctions.start(nft0Key, UInt64.from(1000), UInt64.from(10), UInt64.zero);
     });
     await tx.sign();
@@ -61,7 +61,7 @@ describe("DutchAuctions", () => {
 
     // alice bids after 1 blocks
     appChain.setSigner(alicePrivateKey);
-    tx = appChain.transaction(minter, () => {
+    tx = await appChain.transaction(minter, () => {
       auctions.bid(UInt64.from(0));
     });
     await tx.sign();

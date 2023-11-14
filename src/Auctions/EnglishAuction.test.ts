@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { InMemorySigner, ModuleQuery, TestingAppChain } from "@proto-kit/sdk";
+import { InMemorySigner, TestingAppChain } from "@proto-kit/sdk";
+import { ModuleQuery } from "@proto-kit/sequencer";
 import {
   Poseidon,
   PrivateKey,
@@ -68,7 +69,7 @@ describe("EnglishAuction", () => {
     // Alice mints 1000 tokens
     appChain.setSigner(alicePrivateKey);
     inMemorySigner.config.signer = alicePrivateKey;
-    let tx = appChain.transaction(alice, () => {
+    let tx = await appChain.transaction(alice, () => {
       balances.setBalance(alice, UInt64.from(1000));
     });
     await tx.sign();
@@ -90,7 +91,7 @@ describe("EnglishAuction", () => {
     const minter = minterPrivateKey.toPublicKey();
     inMemorySigner.config.signer = minterPrivateKey; // appChain.setSigner(minterPrivateKey);
 
-    let tx = appChain.transaction(minter, () => {
+    let tx = await appChain.transaction(minter, () => {
       nfts.mint(minter, nftMetadata); // mints to himself
     });
     await tx.sign();
@@ -104,7 +105,7 @@ describe("EnglishAuction", () => {
     expect(nft0?.locked.toBoolean()).toStrictEqual(false); // nft should not be locked
 
     // minter lists for auction
-    tx = appChain.transaction(minter, () => {
+    tx = await appChain.transaction(minter, () => {
       auction.start(nft0Key, UInt64.from(1)); // bidding active for next 1 block
     });
     await tx.sign();
@@ -119,7 +120,7 @@ describe("EnglishAuction", () => {
     // alice bids after 1 blocks
     inMemorySigner.config.signer = alicePrivateKey; // appChain.setSigner(alicePrivateKey);
 
-    tx = appChain.transaction(alice, () => {
+    tx = await appChain.transaction(alice, () => {
       auction.placeBid(nft0Key, UInt64.from(500));
     });
     await tx.sign();
@@ -135,7 +136,7 @@ describe("EnglishAuction", () => {
     // minter accepts bid
     inMemorySigner.config.signer = minterPrivateKey; // appChain.setSigner(minterPrivateKey);
 
-    tx = appChain.transaction(minter, () => {
+    tx = await appChain.transaction(minter, () => {
       auction.end(nft0Key);
     });
     await tx.sign();
@@ -165,7 +166,7 @@ describe("EnglishAuction", () => {
     const minter = minterPrivateKey.toPublicKey();
     inMemorySigner.config.signer = minterPrivateKey; // appChain.setSigner(minterPrivateKey);
 
-    let tx = appChain.transaction(minter, () => {
+    let tx = await appChain.transaction(minter, () => {
       nfts.mint(minter, nftMetadata); // mints to himself
     });
     await tx.sign();
@@ -179,7 +180,7 @@ describe("EnglishAuction", () => {
     // alice tries to list it for auction
     inMemorySigner.config.signer = alicePrivateKey; // appChain.setSigner(alicePrivateKey);
 
-    tx = appChain.transaction(alice, () => {
+    tx = await appChain.transaction(alice, () => {
       auction.start(nft0Key, UInt64.from(4));
     });
     await tx.sign();

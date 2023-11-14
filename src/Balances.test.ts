@@ -25,7 +25,7 @@ describe("Balances", () => {
 
     const balances = appChain.runtime.resolve("Balances");
 
-    const tx1 = appChain.transaction(alice, () => {
+    const tx1 = await appChain.transaction(alice, () => {
       balances.setBalance(alice, UInt64.from(1000));
     });
 
@@ -41,7 +41,7 @@ describe("Balances", () => {
     expect(aliceBalance?.toBigInt()).toBe(1000n);
 
     // alice transfers 100 to someone
-    const tx2 = appChain.transaction(alice, () => {
+    const tx2 = await appChain.transaction(alice, () => {
       balances.transfer(PrivateKey.random().toPublicKey(), UInt64.from(100));
     });
     await tx2.sign();
