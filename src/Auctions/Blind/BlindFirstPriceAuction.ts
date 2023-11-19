@@ -66,6 +66,11 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
       endTime: this.network.block.height.add(biddingWindow).add(revealWindow),
       maxBid: new Bids({ bidder: this.transaction.sender, price: minPrice }),
     });
+    this.privateToken.balance.transferFrom(
+      this.transaction.sender,
+      this.privateToken.DEPOSIT_ADDRESS,
+      minPrice
+    );
     this.auctionIds.set(nftKey, this.createAuction(auction));
   }
 
@@ -73,7 +78,7 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
    * place bid before reveal Time.
    * bidHash = H(auctionId, value, salt)
    * @param nftKey
-   * @param bidHashProof
+   * @param sealedBidProof
    */
   @runtimeMethod()
   public placeSealedBid(nftKey: NFTKey, sealedBidProof: SealedBidProof) {
@@ -126,10 +131,13 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
         .and(auction.endTime.greaterThanOrEqual(this.network.block.height)),
       "outside reveal window"
     );
-    // TODO verify revealBidProof, verify txn sender
+    assert(
+      this.bidHashes.get(revealedBid.bidHash).value,
+      "BidHash does not exist"
+    );
 
     // return locked funds to prev maxBidder if we have a new maxBidder
-    // else to the transaction sender
+    // else to the current bidder
     const refund = Provable.if(
       revealedBid.amount.greaterThan(auction.maxBid.price),
       auction.maxBid.price,
@@ -143,16 +151,20 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
     this.privateToken.unlockBalance(refundee, refund);
 
     // if(revealedBid.amount > maxBid) update maxBid
-    auction.maxBid.bidder = Provable.if(
-      revealedBid.amount.greaterThan(auction.maxBid.price),
-      revealedBid.bidder,
-      auction.maxBid.bidder
-    );
-    auction.maxBid.price = Provable.if(
-      revealedBid.amount.greaterThan(auction.maxBid.price),
-      revealedBid.amount,
-      auction.maxBid.price
-    );
+    const newMaxBid: Bids = new Bids({
+      bidder: Provable.if(
+        revealedBid.amount.greaterThan(auction.maxBid.price),
+        revealedBid.bidder,
+        auction.maxBid.bidder
+      ),
+      price: Provable.if(
+        revealedBid.amount.greaterThan(auction.maxBid.price),
+        revealedBid.amount,
+        auction.maxBid.price
+      ),
+    });
+    this.records.set(auctionId, { ...auction, maxBid: newMaxBid });
+    this.bidHashes.set(revealedBid.bidHash, Bool(false));
   }
 
   /**
