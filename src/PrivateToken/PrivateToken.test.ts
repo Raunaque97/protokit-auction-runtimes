@@ -68,8 +68,8 @@ describe("Private Token", () => {
     balances = appChain.runtime.resolve("Balances");
     balanceQuery = appChain.query.runtime.Balances;
 
-    console.log("Alice: ", alice.toBase58());
-    console.log("Bob:   ", bob.toBase58());
+    // console.log("Alice: ", alice.toBase58());
+    // console.log("Bob:   ", bob.toBase58());
 
     // Alice mints 1000 tokens
     appChain.setSigner(alicePrivateKey);
@@ -111,6 +111,11 @@ describe("Private Token", () => {
       //   (await balanceQuery.balances.get(alice))?.toBigInt()
       // );
       expect((await balanceQuery.balances.get(alice))?.toBigInt()).toBe(900n);
+      expect(
+        (
+          await balanceQuery.balances.get(privateToken.DEPOSIT_ADDRESS)
+        )?.toBigInt()
+      ).toBe(100n);
 
       // Alice adds deposited amount to encrypted balance
       const dummyMerkelMap = new MerkleMap(); // TODO remove later when using appChain state
@@ -142,10 +147,10 @@ describe("Private Token", () => {
       let aliceBalance = (await privateTokenQuery.ledger.get(
         alice
       )) as EncryptedBalance;
-      console.log(
-        "aliceBalance",
-        aliceBalance.decrypt(alicePrivateKey).toBigInt()
-      );
+      // console.log(
+      //   "aliceBalance",
+      //   aliceBalance.decrypt(alicePrivateKey).toBigInt()
+      // );
       expect(aliceBalance.decrypt(alicePrivateKey).toBigInt()).toBe(100n);
 
       // alice sends some to bob
@@ -161,14 +166,28 @@ describe("Private Token", () => {
       let bobClaimBalance = (await privateTokenQuery.claims.get(
         ClaimKey.from(bob, UInt64.from(0))
       )) as EncryptedBalance;
-      console.log(
-        "bobClaimBalance",
-        bobClaimBalance.decrypt(bobPrivateKey).toBigInt()
-      );
+      // console.log(
+      //   "bobClaimBalance",
+      //   bobClaimBalance.decrypt(bobPrivateKey).toBigInt()
+      // );
       expect(aliceBalance.decrypt(alicePrivateKey).toBigInt()).toBe(90n);
       expect(bobClaimBalance.decrypt(bobPrivateKey).toBigInt()).toBe(10n);
 
       // alice deposits another 50
+      const depositHashProof2 = new DepositHashProof({
+        proof: dummy,
+        publicInput: UInt64.from(50),
+        publicOutput: generateDepositHash(UInt64.from(100), r),
+        maxProofsVerified: 2,
+      });
+      tx = await appChain.transaction(alice, () => {
+        privateToken.deposit(depositHashProof2);
+      });
+      await tx.sign();
+      await tx.send();
+      block = await appChain.produceBlock();
+      expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
+      // adds deposited amount to encrypted balance
       tx = await addDepositTxn(
         alicePrivateKey,
         UInt64.from(50),
@@ -179,7 +198,13 @@ describe("Private Token", () => {
       await tx.send();
       block = await appChain.produceBlock();
       expect(block?.txs[0].status, block?.txs[0].statusMessage).toBe(true);
-      // alice add's ttrueaim
+
+      expect(
+        (
+          await balanceQuery.balances.get(privateToken.DEPOSIT_ADDRESS)
+        )?.toBigInt()
+      ).toBe(150n);
+      // alice add's claim
       tx = await addClaimTxn(alicePrivateKey, 1, false);
       await tx.sign();
       await tx.send();
@@ -189,11 +214,13 @@ describe("Private Token", () => {
       aliceBalance = (await privateTokenQuery.ledger.get(
         alice
       )) as EncryptedBalance;
-      console.log(
-        "aliceBalance",
-        aliceBalance.decrypt(alicePrivateKey).toBigInt()
-      );
+      // console.log(
+      //   "aliceBalance",
+      //   aliceBalance.decrypt(alicePrivateKey).toBigInt()
+      // );
       expect(aliceBalance.decrypt(alicePrivateKey).toBigInt()).toBe(140n);
+
+      // TODO test withdraw
     },
     1000 * 60
   );

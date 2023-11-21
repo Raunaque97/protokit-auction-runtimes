@@ -43,7 +43,7 @@ export class EncryptedBalance extends Struct({
     const encryptedBalance = {
       publicKey: this.publicKey,
       cipherText: [...this.cipherText],
-    }; // this is required to deep-copy TODO remove later
+    }; // this is required to deep-copy
     return UInt64.fromFields(Encryption.decrypt(encryptedBalance, privateKey));
   }
 }
@@ -190,4 +190,48 @@ export const depositHashProgram = Experimental.ZkProgram({
 });
 export class DepositHashProof extends Experimental.ZkProgram.Proof(
   depositHashProgram
+) {}
+
+// currentBalance(enc) == resultingBalance(enc) + amount(plain text)
+export class WithdrawProofOutput extends Struct({
+  owner: PublicKey,
+  to: PublicKey,
+  currentBalance: EncryptedBalance,
+  resultingBalance: EncryptedBalance,
+  amount: UInt64,
+}) {}
+export function generateWithdrawProofOutput(
+  ownerPrivateKey: PrivateKey,
+  currentEncryptedBalance: EncryptedBalance,
+  amount: UInt64,
+  to: PublicKey
+): WithdrawProofOutput {
+  const currentBal = currentEncryptedBalance.decrypt(ownerPrivateKey);
+  currentBal.assertGreaterThanOrEqual(amount, "Not enough Balance");
+  const resultingBalance = currentBal.sub(amount);
+
+  const encryptedResultingBalance = EncryptedBalance.from(
+    resultingBalance,
+    ownerPrivateKey.toPublicKey()
+  );
+
+  return new WithdrawProofOutput({
+    owner: ownerPrivateKey.toPublicKey(),
+    to: to,
+    currentBalance: currentEncryptedBalance,
+    resultingBalance: encryptedResultingBalance,
+    amount: amount,
+  });
+}
+export const withdrawProofProgram = Experimental.ZkProgram({
+  publicOutput: WithdrawProofOutput,
+  methods: {
+    generate: {
+      privateInputs: [PrivateKey, EncryptedBalance, UInt64, PublicKey],
+      method: generateWithdrawProofOutput,
+    },
+  },
+});
+export class WithdrawProof extends Experimental.ZkProgram.Proof(
+  withdrawProofProgram
 ) {}

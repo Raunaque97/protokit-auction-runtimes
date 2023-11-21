@@ -63,8 +63,8 @@ describe("EnglishAuction", () => {
     auction = appChain.runtime.resolve("EnglishAuctionModule");
     auctionQuery = appChain.query.runtime.EnglishAuctionModule;
 
-    console.log("Alice: ", alice.toBase58());
-    console.log("Bob:   ", bob.toBase58());
+    // console.log("Alice: ", alice.toBase58());
+    // console.log("Bob:   ", bob.toBase58());
 
     // Alice mints 1000 tokens
     appChain.setSigner(alicePrivateKey);

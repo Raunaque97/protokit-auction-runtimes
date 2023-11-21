@@ -21,6 +21,7 @@ import {
   DepositProof,
   TransferProof,
   DepositHashProof,
+  WithdrawProof,
 } from "./Proofs";
 import { inject } from "tsyringe";
 import { Balances } from "../Balances";
@@ -34,11 +35,14 @@ export class ClaimKey extends Struct({
   }
 }
 
-// TODO: replace mockProofs later
 @runtimeModule()
 export class PrivateToken extends RuntimeModule<unknown> {
   public readonly DEPOSIT_ADDRESS = PublicKey.from({
-    x: Poseidon.hash(Encoding.stringToFields("PrivateToken")),
+    x: Poseidon.hash(Encoding.stringToFields("PrivateToken.deposit")),
+    isOdd: Bool(false),
+  });
+  public readonly WITHDRAW_ADDRESS = PublicKey.from({
+    x: Poseidon.hash(Encoding.stringToFields("PrivateToken.withdraw")),
     isOdd: Bool(false),
   });
 
@@ -186,7 +190,6 @@ export class PrivateToken extends RuntimeModule<unknown> {
 
   /**
    * converts deposited token to private token
-   * TODO
    */
   @runtimeMethod()
   public addDeposit(depositProof: DepositProof) {
@@ -211,10 +214,30 @@ export class PrivateToken extends RuntimeModule<unknown> {
     this.claims.set(claimKey, proofOutput.amount);
   }
 
+  /**
+   * Transter to `this.WITHDRAW_ADDRESS` to get tokens back
+   */
   @runtimeMethod()
-  public withdraw() {
-    //TODO
-    throw new Error("Method not implemented.");
+  public withdraw(withdrawProof: WithdrawProof) {
+    const withdrawProofOutput = withdrawProof.publicOutput;
+    withdrawProof.verify();
+    assert(
+      withdrawProofOutput.to.equals(this.WITHDRAW_ADDRESS),
+      "Wrong recipient"
+    );
+    // Check that the withdrawProof's innitial balance matches with on chain amount
+    const currentBalance = this.ledger.get(withdrawProofOutput.owner).value;
+    assert(
+      withdrawProofOutput.currentBalance.equals(currentBalance),
+      "Proven encrypted balance does not match current known encrypted balance"
+    );
+    // Update the encrypted balance stored in the ledger
+    this.ledger.set(
+      withdrawProofOutput.owner,
+      withdrawProofOutput.resultingBalance
+    );
+    // return the user Tokens
+    this.unlockBalance(withdrawProofOutput.owner, withdrawProofOutput.amount);
   }
   /**
    * to process withdrawals or to return locked funds by other runtimes

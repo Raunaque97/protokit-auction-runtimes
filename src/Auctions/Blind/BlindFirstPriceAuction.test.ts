@@ -90,8 +90,8 @@ describe("BlindFirstPriceAuction", () => {
     privateToken = appChain.runtime.resolve("PrivateToken");
     privateTokenQuery = appChain.query.runtime.PrivateToken;
 
-    console.log("Alice: ", alice.toBase58());
-    console.log("Bob:   ", bob.toBase58());
+    // console.log("Alice: ", alice.toBase58());
+    // console.log("Bob:   ", bob.toBase58());
 
     // Alice, Bob mints 1000 tokens
     appChain.setSigner(alicePrivateKey);
