@@ -9,6 +9,7 @@ import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
 import { StateMap, assert } from "@proto-kit/protocol";
 import { Auction, AuctionModule, BaseAuctionData } from "./Auction";
+import { Balances } from "../Balances";
 
 export class DutchAuction extends Struct({
   ...BaseAuctionData,
@@ -24,7 +25,10 @@ export class DutchAuction extends Struct({
  */
 @runtimeModule()
 export class DutchAuctionModule extends AuctionModule<DutchAuction> {
-  public constructor(@inject("NFT") public nft: NFT) {
+  public constructor(
+    @inject("NFT") public nft: NFT,
+    @inject("Balances") public balance: Balances
+  ) {
     super(nft);
     this.records = StateMap.from<UInt64, DutchAuction>(UInt64, DutchAuction);
   }
@@ -46,6 +50,7 @@ export class DutchAuctionModule extends AuctionModule<DutchAuction> {
       decayRate,
       minPrice,
     });
+    assert(auction.startPrice.greaterThan(auction.minPrice), "Invalid price");
     this.createAuction(auction);
   }
 
@@ -56,16 +61,25 @@ export class DutchAuctionModule extends AuctionModule<DutchAuction> {
   @runtimeMethod()
   public bid(auctionId: UInt64) {
     const auction = this.records.get(auctionId).value;
-    const decay = this.network.block.height
+    const decay = Provable.if(
+      this.network.block.height.equals(UInt64.zero),
+      this.network.block.height.add(auction.startTime),
+      this.network.block.height
+    )
       .sub(auction.startTime)
       .mul(auction.decayRate);
+
     const finalPrice = Provable.if(
       decay.greaterThan(auction.startPrice.sub(auction.minPrice)),
       auction.minPrice,
       auction.startPrice.sub(decay)
     );
-    // console.log("Final prize", finalPrice.toString());
-    // TODO do token transfer
+
+    this.balance.transferFrom(
+      this.transaction.sender,
+      auction.creator,
+      finalPrice
+    );
     this.endAuction(auctionId, this.transaction.sender);
   }
 }
