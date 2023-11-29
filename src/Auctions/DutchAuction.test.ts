@@ -13,6 +13,7 @@ import { DutchAuction, DutchAuctionModule } from "./DutchAuction";
 import { log } from "@proto-kit/common";
 import { ModuleQuery } from "@proto-kit/sequencer";
 import { Balances } from "../Balances";
+import { GlobalCounter } from "../GlobalCounter";
 
 log.setLevel("ERROR");
 
@@ -20,6 +21,7 @@ describe("DutchAuctions", () => {
   let appChain: TestingAppChain<{
     DutchAuctionModule: typeof DutchAuctionModule;
     NFT: typeof NFT;
+    GlobalCounter: typeof GlobalCounter;
     Balances: typeof Balances;
   }>;
   let alicePrivateKey: PrivateKey;
@@ -38,11 +40,13 @@ describe("DutchAuctions", () => {
       modules: {
         DutchAuctionModule,
         NFT,
+        GlobalCounter,
         Balances,
       },
       config: {
         DutchAuctionModule: {},
         NFT: {},
+        GlobalCounter: {},
         Balances: {},
       },
     });

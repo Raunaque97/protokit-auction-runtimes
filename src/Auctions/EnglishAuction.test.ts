@@ -13,6 +13,7 @@ import { NFTKey, NFT } from "../NFT";
 import { EnglishAuction, EnglishAuctionModule } from "./EnglishAuction";
 import { log } from "@proto-kit/common";
 import { Balances } from "../Balances";
+import { GlobalCounter } from "../GlobalCounter";
 
 log.setLevel("ERROR");
 
@@ -20,6 +21,7 @@ describe("EnglishAuction", () => {
   let appChain: TestingAppChain<{
     EnglishAuctionModule: typeof EnglishAuctionModule;
     NFT: typeof NFT;
+    GlobalCounter: typeof GlobalCounter;
     Balances: typeof Balances;
   }>;
   let alicePrivateKey: PrivateKey;
@@ -39,11 +41,13 @@ describe("EnglishAuction", () => {
       modules: {
         EnglishAuctionModule,
         NFT,
+        GlobalCounter,
         Balances,
       },
       config: {
         EnglishAuctionModule: {},
         NFT: {},
+        GlobalCounter: {},
         Balances: {},
       },
     });

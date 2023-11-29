@@ -1,8 +1,9 @@
 import { runtimeModule, RuntimeModule, state } from "@proto-kit/module";
-import { Bool, PublicKey, Struct, UInt64 } from "o1js";
+import { Bool, public_, PublicKey, Struct, UInt64 } from "o1js";
 import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
-import { StateMap, State, assert } from "@proto-kit/protocol";
+import { StateMap, assert } from "@proto-kit/protocol";
+import { GlobalCounter } from "../GlobalCounter";
 
 export const BaseAuctionData = {
   nftKey: NFTKey,
@@ -17,9 +18,11 @@ export abstract class AuctionModule<
   A extends Auction
 > extends RuntimeModule<{}> {
   @state() public records!: StateMap<UInt64, A>;
-  @state() public counter = State.from<UInt64>(UInt64);
 
-  public constructor(@inject("NFT") public nft: NFT) {
+  public constructor(
+    @inject("NFT") public nft: NFT,
+    @inject("GlobalCounter") public counter: GlobalCounter
+  ) {
     super();
   }
 
@@ -28,8 +31,9 @@ export abstract class AuctionModule<
    * @param auction
    */
   public createAuction(auction: A): UInt64 {
-    this.records.set(this.counter.get().value, auction);
-    this.counter.set(this.counter.get().value.add(1));
+    const auctionId = this.counter.value();
+    this.records.set(auctionId, auction);
+    this.counter.increment();
 
     const nftKey = auction.nftKey;
     // console.log(
@@ -43,7 +47,7 @@ export abstract class AuctionModule<
 
     // lock the nft
     this.nft.lock(auction.nftKey);
-    return this.counter.get().value.sub(UInt64.one);
+    return auctionId;
   }
 
   /**

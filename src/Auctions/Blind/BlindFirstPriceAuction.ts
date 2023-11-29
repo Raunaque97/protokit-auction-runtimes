@@ -15,6 +15,7 @@ import { NFT, NFTKey } from "../../NFT";
 import { AuctionModule, BaseAuctionData } from "../Auction";
 import { PrivateToken } from "../../PrivateToken/PrivateToken";
 import { RevealBidProof, SealedBidProof } from "./Proofs";
+import { GlobalCounter } from "../../GlobalCounter";
 
 export class Bids extends Struct({
   bidder: PublicKey,
@@ -40,9 +41,10 @@ export class BlindFirstPriceAuctionModule extends AuctionModule<BlindFirstPriceA
 
   public constructor(
     @inject("NFT") public nft: NFT,
+    @inject("GlobalCounter") public counter: GlobalCounter,
     @inject("PrivateToken") public privateToken: PrivateToken
   ) {
-    super(nft);
+    super(nft, counter);
     this.records = StateMap.from<UInt64, BlindFirstPriceAuction>(
       UInt64,
       BlindFirstPriceAuction

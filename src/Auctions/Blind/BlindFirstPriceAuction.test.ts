@@ -30,6 +30,7 @@ import { Pickles } from "o1js/dist/node/snarky";
 import { dummyBase64Proof } from "o1js/dist/node/lib/proof_system";
 import { RevealBidProof, SealedBidProof, calcBidHash } from "./Proofs";
 import { ModuleQuery } from "@proto-kit/sequencer";
+import { GlobalCounter } from "../../GlobalCounter";
 
 log.setLevel("ERROR");
 
@@ -37,6 +38,7 @@ describe("BlindFirstPriceAuction", () => {
   let appChain: TestingAppChain<{
     BlindFirstPriceAuctionModule: typeof BlindFirstPriceAuctionModule;
     NFT: typeof NFT;
+    GlobalCounter: typeof GlobalCounter;
     Balances: typeof Balances;
     PrivateToken: typeof PrivateToken;
   }>;
@@ -60,12 +62,14 @@ describe("BlindFirstPriceAuction", () => {
       modules: {
         BlindFirstPriceAuctionModule,
         NFT,
+        GlobalCounter,
         Balances,
         PrivateToken,
       },
       config: {
         BlindFirstPriceAuctionModule: {},
         NFT: {},
+        GlobalCounter: {},
         Balances: {},
         PrivateToken: {},
       },

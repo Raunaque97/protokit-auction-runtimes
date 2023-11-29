@@ -5,6 +5,7 @@ import { inject } from "tsyringe";
 import { NFT, NFTKey } from "../NFT";
 import { Balances } from "../Balances";
 import { AuctionModule, BaseAuctionData } from "./Auction";
+import { GlobalCounter } from "../GlobalCounter";
 
 export class Bids extends Struct({
   bidder: PublicKey,
@@ -28,9 +29,10 @@ export class EnglishAuctionModule extends AuctionModule<EnglishAuction> {
 
   public constructor(
     @inject("NFT") public nft: NFT,
+    @inject("GlobalCounter") public counter: GlobalCounter,
     @inject("Balances") public balance: Balances
   ) {
-    super(nft);
+    super(nft, counter);
     this.records = StateMap.from<UInt64, EnglishAuction>(
       UInt64,
       EnglishAuction

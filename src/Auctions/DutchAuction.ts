@@ -10,6 +10,7 @@ import { NFT, NFTKey } from "../NFT";
 import { StateMap, assert } from "@proto-kit/protocol";
 import { Auction, AuctionModule, BaseAuctionData } from "./Auction";
 import { Balances } from "../Balances";
+import { GlobalCounter } from "../GlobalCounter";
 
 export class DutchAuction extends Struct({
   ...BaseAuctionData,
@@ -27,9 +28,10 @@ export class DutchAuction extends Struct({
 export class DutchAuctionModule extends AuctionModule<DutchAuction> {
   public constructor(
     @inject("NFT") public nft: NFT,
+    @inject("GlobalCounter") public counter: GlobalCounter,
     @inject("Balances") public balance: Balances
   ) {
-    super(nft);
+    super(nft, counter);
     this.records = StateMap.from<UInt64, DutchAuction>(UInt64, DutchAuction);
   }
 
