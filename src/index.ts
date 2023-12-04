@@ -13,3 +13,4 @@ export {
 export * as BlindAuctionUtils from "./Auctions/Blind/Proofs";
 export { PrivateToken, ClaimKey } from "./PrivateToken/PrivateToken";
 export * as PrivateTokenUtils from "./PrivateToken/Proofs";
+export { GlobalCounter } from "./GlobalCounter";
